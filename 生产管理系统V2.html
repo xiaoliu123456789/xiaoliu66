@@ -1,0 +1,2948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>生产管理系统 · 车间作业</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#fff; --line:#e6e8ec; --line2:#d6d9df;
+  --tx:#1f2328; --tx2:#5b6370; --tx3:#8b93a1;
+  --pri:#2f5fd0; --pri-bg:#eef3fd;
+  --ok:#1a7f52; --ok-bg:#e8f5ee;
+  --warn:#a86400; --warn-bg:#fdf3e3;
+  --err:#c0392b; --err-bg:#fdeceb;
+  --gray-bg:#f0f1f4;
+  --r:8px; --r2:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font:14px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+
+/* ---------- 顶栏 ---------- */
+.top{height:52px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 16px;position:sticky;top:0;z-index:20;flex-wrap:nowrap;overflow-x:auto}
+.top .logo{font-size:15px;font-weight:600;letter-spacing:.3px}
+.top .logo span{color:var(--tx3);font-weight:400;font-size:12.5px;margin-left:8px}
+.top .sp{flex:1}
+.role{display:flex;gap:2px;background:var(--gray-bg);padding:3px;border-radius:var(--r)}
+.role button{padding:5px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)}
+.role button.on{background:#fff;color:var(--tx);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.who{font-size:12.5px;color:var(--tx2)}
+
+/* ---------- 布局 ---------- */
+.wrap{display:flex;height:calc(100vh - 52px)}
+.nav{width:92px;background:#fff;border-right:1px solid var(--line);padding:10px 6px;overflow-y:auto;flex:0 0 92px}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding:10px 4px;border-radius:var(--r);font-size:12px;color:var(--tx2);margin-bottom:2px}
+.nav button .ic{font-size:17px;line-height:1}
+.nav button.on{background:var(--pri-bg);color:var(--pri);font-weight:600}
+.nav button .bdg{position:absolute;top:6px;right:12px;min-width:16px;height:16px;border-radius:8px;background:var(--err);color:#fff;font-size:10px;line-height:16px;text-align:center;padding:0 4px}
+.nav button{position:relative}
+
+.list{width:300px;flex:0 0 300px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column}
+.list .lh{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+.list .lh h3{font-size:14px;font-weight:600}
+.list .lh p{font-size:12px;color:var(--tx3);margin-top:3px}
+.list .lb{flex:1;overflow-y:auto}
+.ls{display:flex;gap:8px;padding:11px 14px;border-bottom:1px solid #f1f2f5;cursor:pointer;align-items:flex-start}
+.ls:hover{background:#fafbfc}
+.ls.on{background:var(--pri-bg);box-shadow:inset 3px 0 0 var(--pri)}
+.ls .m{flex:1;min-width:0}
+.ls .t{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls .s{font-size:12px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls .r{font-size:11.5px;color:var(--tx3);text-align:right;white-space:nowrap;padding-top:1px;flex:0 0 auto;margin-left:6px}
+.ls .r b{display:block;font-size:13px;color:var(--tx);font-weight:600}
+.empty{padding:36px 20px;text-align:center;color:var(--tx3);font-size:13px}
+@media(max-width:900px){ .empty{padding:60px 20px} }
+
+.panel{flex:1;min-width:0;overflow-y:auto;padding:18px 20px 40px}
+.ph{margin-bottom:14px}
+.ph .crumb{font-size:12px;color:var(--tx3)}
+.ph h2{font-size:17px;font-weight:600;margin:3px 0 4px}
+.ph p{font-size:12.5px;color:var(--tx2)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px}
+.card h4{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h4 .sp{flex:1;font-weight:400;font-size:12px;color:var(--tx3)}
+.sec-t{font-size:12.5px;font-weight:600;color:var(--tx2);margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.sec-t .sp{flex:1;font-weight:400;color:var(--tx3);font-size:12px;text-align:right}
+
+/* ---------- 条目行（替代表格） ---------- */
+.kv{display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed #eef0f3;font-size:13px}
+.kv:last-child{border-bottom:none}
+.kv .k{width:88px;flex:0 0 88px;color:var(--tx3);font-size:12.5px}
+.kv .v{flex:1;min-width:0}
+
+/* ---------- 可勾选条目 ---------- */
+.pick{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;cursor:pointer;background:#fff}
+.pick:hover{border-color:var(--line2)}
+.pick.on{border-color:var(--pri);background:var(--pri-bg)}
+.pick.dis{opacity:.5;cursor:default}
+.box{width:17px;height:17px;flex:0 0 17px;border:1.5px solid var(--line2);border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.pick.on .box{background:var(--pri);border-color:var(--pri)}
+.pick .m{flex:1;min-width:0}
+.pick .t{font-size:13.5px;font-weight:500}
+.pick .s{font-size:11.5px;color:var(--tx2);margin-top:2px}
+.pick .r{font-size:11.5px;color:var(--tx3);text-align:right}
+
+/* ---------- chip / badge ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--line);border-radius:14px;font-size:12px;background:#fff;cursor:pointer}
+.chip:hover{border-color:var(--line2)}
+.chip.on{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:500}
+.chip.dis{opacity:.45;cursor:default}
+.chip.co{border-style:dashed;border-color:var(--tx3);color:var(--tx2)}
+.chip .tg{font-style:normal;display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:3px;background:var(--warn-bg);color:#8a5300;font-size:11px;font-weight:500;letter-spacing:.2px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11.5px;background:var(--gray-bg);color:var(--tx2);white-space:nowrap}
+.badge.pri{background:var(--pri-bg);color:var(--pri)}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.err{background:var(--err-bg);color:var(--err)}
+
+/* ---------- 进度 ---------- */
+.bar{height:6px;background:var(--gray-bg);border-radius:3px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%;background:var(--pri)}
+.bar i.ok{background:var(--ok)}
+.bar i.do{background:#e0a300}
+.stepbar{display:flex;gap:3px;margin-top:6px}
+.stepbar i{flex:1;height:5px;border-radius:2px;background:var(--gray-bg)}
+.stepbar i.done{background:var(--ok)}
+.stepbar i.doing{background:#e0a300}
+.ring{width:44px;height:44px;flex:0 0 44px}
+
+/* ---------- 表单 / 按钮 ---------- */
+.frm{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.fld{flex:1;min-width:130px}
+.fld label{display:block;font-size:12px;color:var(--tx2);margin-bottom:4px}
+.fld input,.fld select,.fld textarea{width:100%;padding:7px 9px;border:1px solid var(--line2);border-radius:var(--r);background:#fff;font-size:13px}
+.fld input:focus,.fld select:focus{outline:2px solid var(--pri-bg);border-color:var(--pri)}
+.btn{padding:7px 14px;border:1px solid var(--line2);border-radius:var(--r);background:#fff;font-size:13px}
+.btn:hover{border-color:var(--tx3)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:500}
+.btn.pri:hover{background:#2a55bd}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:500}
+.btn.warn{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:500}
+.btn.err{background:var(--err);border-color:var(--err);color:#fff;font-weight:500}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.bar-btm{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--gray-bg);border-radius:var(--r);margin-top:12px;flex-wrap:wrap}
+.lnk{color:var(--pri);font-size:12.5px;cursor:pointer}
+.lnk:hover{text-decoration:underline}
+.note{padding:10px 12px;border-radius:var(--r);font-size:12.5px;line-height:1.7;background:var(--pri-bg);color:#24406e;margin-bottom:12px}
+.note.ok{background:var(--ok-bg);color:#14603d}
+.note.warn{background:var(--warn-bg);color:#8a5300}
+.note.err{background:var(--err-bg);color:#96271a}
+
+/* ---------- 统计 ---------- */
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.stat{flex:1;min-width:88px;background:var(--gray-bg);border-radius:var(--r);padding:9px 11px}
+.stat .l{font-size:11.5px;color:var(--tx2)}
+.stat .n{font-size:19px;font-weight:600;margin-top:2px}
+
+/* ---------- 人员行 ---------- */
+.prow{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r);margin-bottom:7px}
+.prow.on{border-color:var(--pri);background:var(--pri-bg)}
+.prow .av{width:30px;height:30px;flex:0 0 30px;border-radius:50%;background:var(--pri-bg);color:var(--pri);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.prow .m{flex:1;min-width:0}
+.prow .t{font-size:13px;font-weight:500}
+.prow .s{font-size:11.5px;color:var(--tx2)}
+/* 排产甘特图 */
+.gt{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#fff}
+.gt-row{display:flex;align-items:stretch;border-bottom:1px dashed #eef0f3}
+.gt-row:last-child{border-bottom:none}
+.gt-row.gt-scale{background:var(--gray-bg);border-bottom:1px solid var(--line)}
+.gt-lab{width:136px;flex:0 0 136px;padding:6px 10px;border-right:1px solid var(--line);overflow:hidden}
+.gt-lab .t{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-lab .s{font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-track{position:relative;flex:1;min-width:0;height:32px}
+.gt-tick{position:absolute;top:5px;font-size:11px;color:var(--tx3)}
+.gt-bar{position:absolute;top:6px;height:20px;border-radius:5px;background:var(--pri);color:#fff;font-size:11px;
+  line-height:20px;padding:0 7px;white-space:nowrap;overflow:hidden;box-sizing:border-box}
+.gt-bar.sel{background:#1a7f52}
+.gt-bar.draft{background:#e6eaf1;color:#5b6470;border:1px dashed #b9c2cf}
+.gt-bar.other{background:#c3cad6;color:#41474f}
+.gt-mark{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed #e0a020}
+.lg{display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--pri);margin-right:4px}
+.lg.sel{background:#1a7f52}.lg.draft{background:#e6eaf1;border:1px dashed #b9c2cf}.lg.other{background:#c3cad6}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:99;display:flex;flex-direction:column;gap:8px;align-items:center}
+#toast div{background:#1f2328;color:#fff;padding:9px 16px;border-radius:var(--r);font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+#toast div.ok{background:var(--ok)}
+#toast div.err{background:var(--err)}
+
+.back{display:none}
+@media(max-width:900px){
+  .top{gap:8px;padding:0 10px}
+  .top .logo{font-size:14px;white-space:nowrap}
+  .top .logo span{display:none}
+  .top .who{flex:0 0 auto}
+  .top .who select{max-width:118px;padding:4px 6px;font-size:12px}
+  .role{flex:0 0 auto}
+  .role button{padding:5px 9px;font-size:12px;white-space:nowrap}
+  .nav{width:100%;flex:none;display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:6px}
+  .nav button{flex:0 0 auto;width:auto;padding:8px 12px}
+  .nav button .bdg{position:static;margin-left:4px}
+  .wrap{flex-direction:column}
+  .list{width:100%;flex:none;border-right:none;max-height:none}
+  .ls{flex-wrap:wrap}
+  .ls .m{flex:1 1 100%}
+  .ls .r{width:100%;text-align:left;margin:5px 0 0;color:var(--tx2)}
+  .ls .r b{display:inline;margin-right:4px}
+  .panel{padding:14px}
+  body.mobile-panel .list{display:none}
+  body:not(.mobile-panel) .panel{display:none}
+  .back{display:inline-block}
+}
+
+/* ============================================================
+   改版样式：配色与布局对齐参考稿
+   深藏青侧栏 #182845 · 亮蓝主色 #3999fe · 浅灰底 #f3f5f8
+   ============================================================ */
+:root{
+  --pri:#3999fe; --pri-d:#2b86e8; --pri-bg:#eff6ff;
+  --bg:#f3f5f8; --line:#eef0f4; --line2:#e3e6eb;
+  --tx:#1f2430; --tx2:#5b6270; --tx3:#98a0ae;
+  --ok:#22b573; --ok-bg:#e9f8f0;
+  --warn:#fea426; --warn-bg:#fef4e7;
+  --err:#fe6c75; --err-bg:#feeaeb;
+  --gray-bg:#f5f7fa;
+  --nav:#182845; --nav-tx:#c2cadd;
+  --r:6px; --r2:10px;
+}
+body{background:var(--bg)}
+
+/* ---------- 外壳 ---------- */
+.wrap{display:flex;height:100vh;overflow:hidden}
+.nav{width:220px;flex:0 0 220px;background:var(--nav);border-right:none;padding:0;overflow:hidden;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px}
+.bmark{width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:linear-gradient(135deg,#ffa63d,#f0670a);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(240,103,10,.35)}
+.bmark svg{width:19px;height:19px}
+.btxt{font-size:15px;font-weight:600;color:#fff;line-height:1.25;letter-spacing:.2px}
+.btxt em{display:block;font-style:normal;font-size:11px;font-weight:400;color:rgba(255,255,255,.45);margin-top:3px}
+.navlist{flex:1;overflow-y:auto;padding:4px 12px 12px}
+.nav button{display:flex;flex-direction:row;align-items:center;gap:10px;width:100%;padding:10px 14px;border-radius:8px;font-size:13.5px;color:var(--nav-tx);margin-bottom:2px}
+.nav button:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav button.on{background:var(--pri);color:#fff;font-weight:500;box-shadow:0 6px 16px rgba(57,153,254,.3)}
+.nav button .ic{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:0;flex:0 0 18px}
+.nav button .ic svg{width:18px;height:18px}
+.nav button .bdg{position:static;margin-left:auto;background:var(--err);color:#fff;font-size:10.5px;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 5px}
+.nav button.on .bdg{background:rgba(255,255,255,.3)}
+.navfoot{padding:12px 20px 16px;font-size:11.5px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:7px}
+.dot-g{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.top{height:58px;flex:0 0 58px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 22px;position:relative;overflow:visible}
+.navtoggle{width:30px;height:30px;flex:0 0 30px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#4b5563;transition:.15s}
+.navtoggle:hover{background:#f2f5fa;color:var(--pri)}
+.navtoggle svg{width:19px;height:19px}
+.crumb{display:flex;align-items:center;min-width:0;white-space:nowrap;margin-left:2px}
+.crumb .cc{font-size:15px;font-weight:400;color:#8c8c8c;overflow:hidden;text-overflow:ellipsis}
+.nav{transition:width .2s,flex-basis .2s}
+/* 侧栏收起为图标模式（仅桌面） */
+@media(min-width:901px){
+  body.navc .nav{width:64px;flex:0 0 64px}
+  body.navc .brand{justify-content:center;padding:18px 0 14px}
+  body.navc .btxt,body.navc .navfoot{display:none}
+  body.navc .navlist{padding:6px 8px 12px}
+  body.navc .nav button{justify-content:center;padding:11px 0;gap:0}
+  body.navc .nav button .nm{display:none}
+  body.navc .nav button .bdg{position:absolute;top:7px;right:13px;min-width:6px;width:6px;height:6px;padding:0;border-radius:50%;font-size:0;line-height:0;overflow:hidden;background:var(--err)}
+  body.navc .navtoggle svg{transform:rotate(180deg)}
+  body.navc .nav button .ic{width:20px;height:20px;flex:0 0 20px}
+  body.navc .nav button .ic svg{width:20px;height:20px}
+}
+.vline{width:1px;height:18px;background:var(--line2)}
+.ibtn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx2);padding:6px 8px;border-radius:6px;position:relative}
+.ibtn svg{width:17px;height:17px}
+.ibtn:hover{background:var(--gray-bg);color:var(--pri)}
+.ibtn .icw{position:relative;display:flex;align-items:center}
+.ibtn .dot{position:absolute;top:-6px;right:-3px;min-width:15px;height:15px;line-height:15px;border-radius:8px;background:var(--err);color:#fff;font-size:10px;text-align:center;font-style:normal;padding:0 3px;box-shadow:0 0 0 2px #fff}
+.role{background:var(--gray-bg);padding:3px;border-radius:8px;display:flex;gap:2px;flex:0 0 auto}
+.role button{padding:5px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2);white-space:nowrap}
+.role button.on{background:#fff;color:var(--pri);font-weight:600;box-shadow:0 1px 3px rgba(24,40,69,.12)}
+.who{font-size:12.5px;color:var(--tx2);white-space:nowrap}
+.who select{border:1px solid var(--line2);border-radius:6px;padding:5px 8px;font-size:12.5px;background:#fff;color:var(--tx)}
+.avatar{width:32px;height:32px;flex:0 0 32px;border-radius:50%;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.body{flex:1;display:flex;min-height:0;overflow:hidden}
+.list{width:300px;flex:0 0 300px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column}
+.panel{flex:1;min-width:0;overflow-y:auto;padding:18px 22px 32px}
+body.wide .list{display:none}
+body.wide .back{display:none!important}
+
+/* ---------- 组件 ---------- */
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(24,40,69,.03)}
+.card h4{font-size:14px;margin-bottom:12px}
+.ph .crumb{font-size:12px;color:var(--tx3)}
+.ph h2{font-size:18px;margin:4px 0 5px}
+.ph p{font-size:12.5px}
+.btn{border:1px solid var(--line2);border-radius:var(--r);padding:7px 14px;background:#fff;font-size:13px;transition:.15s}
+.btn:hover{border-color:var(--pri);color:var(--pri)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:500}
+.btn.pri:hover{background:var(--pri-d);border-color:var(--pri-d);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.ok:hover{background:#1c9e63;border-color:#1c9e63;color:#fff}
+.btn.warn{background:var(--warn);border-color:var(--warn);color:#fff}
+.btn.warn:hover{background:#f39310;border-color:#f39310;color:#fff}
+.btn.err{background:var(--err);border-color:var(--err);color:#fff}
+.btn.err:hover{background:#f25663;border-color:#f25663;color:#fff}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.fld input,.fld select,.fld textarea{border:1px solid var(--line2);border-radius:var(--r);padding:8px 10px;font-size:13px;color:var(--tx);background:#fff}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(57,153,254,.14)}
+.badge{border-radius:5px;padding:2px 9px;font-size:12px;background:#f2f4f7;color:#6b7280}
+.badge.pri{background:#ebf4fe;color:#2f8bfe}
+.badge.ok{background:var(--ok-bg);color:#1d9d63}
+.badge.warn{background:var(--warn-bg);color:#e08a1e}
+.badge.err{background:var(--err-bg);color:#ef5b66}
+.ls{padding:12px 16px;border-bottom:1px solid #f4f6f9}
+.ls:hover{background:#f8fbff}
+.ls.on{background:var(--pri-bg);box-shadow:inset 3px 0 0 var(--pri)}
+.ls .r b{color:var(--pri)}
+.list .lh{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.list .lh p{font-size:12px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.stat .n{font-size:20px}
+.pick{border-radius:8px}
+.pick.on{background:var(--pri-bg);border-color:var(--pri)}
+.note{border-radius:8px}
+.bar-btm{background:#f8fafc;border:1px solid var(--line);border-radius:8px}
+
+/* ---------- 项目管理看板 ---------- */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:16px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:.18s;text-align:left}
+.kpi:hover{box-shadow:0 8px 22px rgba(24,40,69,.09);transform:translateY(-1px)}
+.kpi .ki{width:46px;height:46px;flex:0 0 46px;border-radius:11px;display:flex;align-items:center;justify-content:center}
+.kpi .ki svg{width:21px;height:21px}
+.kpi .ki.b{background:#eff6ff;color:#2787ec}
+.kpi .ki.o{background:#fff7ed;color:#ff921b}
+.kpi .ki.r{background:#feeaeb;color:#fe6c75}
+.kpi .ki.g{background:#e9f8f0;color:#22b573}
+.kpi .kl{font-size:13px;color:#6b7280}
+.kpi .kx{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.kpi .kv{font-size:26px;font-weight:700;color:#1f2430;line-height:1.15;margin:1px 0 2px;letter-spacing:.5px}
+.kpi .ks{font-size:12px;color:#9aa3b2}
+.kpi.on{border-color:var(--pri);box-shadow:0 0 0 3px rgba(57,153,254,.12)}
+
+.pcard{background:#fff;border:1px solid var(--line);border-radius:var(--r2);box-shadow:0 1px 2px rgba(24,40,69,.03);overflow:hidden}
+.pcard-h{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:16px 20px}
+.pcard-h h3{font-size:15px;font-weight:600;color:var(--tx)}
+.pcard-h .sp{flex:1}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:0 20px 12px}
+.frow2{display:flex;gap:12px;align-items:center;padding:0 20px 16px;flex-wrap:wrap}
+.fin{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:var(--r);padding:0 12px;height:38px;background:#fff;transition:.15s;min-width:0}
+.fin>span{font-size:12.5px;color:var(--tx3);white-space:nowrap}
+.fin input,.fin select{flex:1;min-width:0;border:none;outline:none;background:none;font-size:13px;color:var(--tx);height:100%;padding:0}
+.fin select{appearance:none;cursor:pointer}
+.fin svg{width:14px;height:14px;color:var(--tx3);flex:0 0 14px}
+.fin:focus-within{border-color:var(--pri);box-shadow:0 0 0 3px rgba(57,153,254,.13)}
+.fin.w2{flex:1 1 240px}
+.collapse{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:13px;color:var(--pri);padding:6px 8px;border-radius:6px;white-space:nowrap}
+.collapse:hover{background:var(--pri-bg)}
+.tbl-wrap{overflow-x:auto;border-top:1px solid var(--line)}
+.ptbl{width:100%;border-collapse:collapse;font-size:13px;min-width:1020px}
+.ptbl th{background:#e8f5ff;color:#4a5568;font-weight:500;text-align:left;padding:11px 14px;white-space:nowrap;font-size:13px}
+.ptbl td{padding:10px 14px;border-bottom:1px solid #f3f5f8;color:#2b3242;white-space:nowrap}
+.ptbl tbody tr:hover{background:#f8fbff}
+.ptbl .no{color:#3d4658;letter-spacing:.2px}
+.ptbl .num{font-variant-numeric:tabular-nums}
+.ptbl .bt{display:inline-flex;align-items:center;height:23px;padding:0 11px;border-radius:4px;color:#fff;font-size:12px;margin-right:6px}
+.ptbl .bt.b{background:var(--pri)}
+.ptbl .bt.o{background:var(--warn)}
+.ptbl .bt:hover{filter:brightness(.95)}
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:16px 20px 18px;font-size:12.5px;color:var(--tx2);flex-wrap:wrap}
+.pager .pg{min-width:28px;height:28px;border-radius:6px;border:1px solid var(--line2);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12.5px;padding:0 6px}
+.pager .pg:hover{border-color:var(--pri);color:var(--pri)}
+.pager .pg.on{border-color:var(--pri);color:var(--pri);background:var(--pri-bg);font-weight:600}
+.pager .pg:disabled{opacity:.4;cursor:default}
+.pager select,.pager input{height:28px;border:1px solid var(--line2);border-radius:6px;background:#fff;font-size:12.5px;color:var(--tx2);padding:0 4px;outline:none}
+.pager input{width:46px;text-align:center}
+.pager select:focus,.pager input:focus{border-color:var(--pri)}
+
+/* ---------- 工序库 ---------- */
+.pcard-h .sub{margin-left:12px;font-size:12.5px;color:var(--tx3);font-weight:400}
+.pfbar{display:flex;justify-content:flex-end;gap:10px;padding:0 20px 16px}
+.pfbar .btn{height:38px;padding:0 18px}
+.ptbl .lk{color:var(--pri);cursor:pointer}
+.ptbl .lk:hover{text-decoration:underline}
+.ptbl .muted{color:#a3aab8}
+.tag{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:4px;font-size:12px;font-weight:500;white-space:nowrap}
+.tag.main{background:var(--pri-bg);color:#2b86e8}
+.tag.ind{background:var(--warn-bg);color:#8a5300}
+.seg{display:flex;background:#f2f4f8;border-radius:8px;padding:3px;gap:3px}
+.seg button{flex:1;height:34px;border-radius:6px;font-size:13px;color:var(--tx2);transition:.15s}
+.seg button.on{background:#fff;color:var(--pri);font-weight:600;box-shadow:0 1px 3px rgba(24,40,69,.12)}
+.hint{font-size:12px;color:var(--tx3);margin-top:6px;line-height:1.65}
+.req{color:var(--err);font-style:normal}
+
+.crow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-bottom:8px}
+.crow .ci{width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:var(--pri-bg);color:#2b86e8;font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.crow .cn{flex:1;min-width:0}
+.crow .cn b{font-size:13px;font-weight:500;color:var(--tx);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .cn em{font-style:normal;font-size:11.5px;color:var(--tx3);display:block;margin-top:2px}
+.crow .ca{display:flex;align-items:center;gap:2px;flex:0 0 auto}
+.crow .ca button{height:24px;min-width:24px;border-radius:5px;color:var(--tx2);font-size:12px;padding:0 4px}
+.crow .ca button:hover:not(:disabled){background:#f2f5fa;color:var(--pri)}
+.crow .ca button:disabled{color:#d2d8e2;cursor:default}
+.crow .ca .sw{padding:0 8px;color:var(--pri)}
+.crow .ca .sw:hover{background:var(--pri-bg)}
+.crow .ca .rm{padding:0 8px;color:var(--err)}
+.crow .ca .rm:hover{background:var(--err-bg);color:#e04450}
+.crow.pre{background:#fffbf2;border-color:#f6e3bf}
+.crow.pre .ci{background:var(--warn-bg);color:#8a5300}
+.dw-f .sp{flex:1}
+.dw-f .del{color:var(--err);border-color:#f7c9cd;background:#fff;margin-right:auto}
+.dw-f .del:hover{background:var(--err-bg);color:#e04450;border-color:#f7c9cd}
+.dw-f .del.on{background:var(--err);color:#fff;border-color:var(--err)}
+.mtbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.mtbl th{background:#f5f8fc;color:#6b7280;font-weight:500;text-align:left;padding:8px 10px;white-space:nowrap}
+.mtbl td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;color:#2b3242}
+.mtbl td.num,.mtbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.mtbl tr:last-child td{border-bottom:none}
+.mt-wrap{overflow-x:auto;margin:0 -2px}
+.dw-hero{border:1px solid var(--line);border-radius:10px;padding:16px 16px 14px;background:#fafcff;margin-bottom:16px}
+.dw-hero .hrow{display:flex;align-items:flex-start;gap:12px}
+.dw-hero .hmain{min-width:0}
+.dw-hero .hname{font-size:17px;font-weight:600;color:var(--tx);line-height:1.35}
+.dw-hero .hcode{display:inline-block;font-size:12px;color:var(--tx3);margin-top:4px;letter-spacing:.4px}
+.dw-hero .hb{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;padding-top:2px}
+.dw-hero .hstats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:14px;padding-top:12px;border-top:1px solid #e6ecf5}
+.dw-hero .hstats>div{padding-left:14px;border-left:1px solid #e6ecf5;min-width:0}
+.dw-hero .hstats>div:first-child{padding-left:0;border-left:none}
+.dw-hero .sl{font-size:12px;color:var(--tx3)}
+.dw-hero .sv{font-size:15px;font-weight:600;color:var(--tx);margin-top:3px;font-variant-numeric:tabular-nums}
+.dw-hero .sv em{font-style:normal;font-size:12px;font-weight:400;color:var(--tx3);margin-left:3px}
+@media(max-width:640px){ .pcard-h .sub{display:none} }
+@media(max-width:560px){ .mtbl th,.mtbl td{white-space:normal;padding:7px 6px} }
+
+/* ---------- 右侧抽屉 ---------- */
+.dw-mask{position:fixed;inset:0;background:rgba(16,24,40,.34);z-index:70;opacity:0;pointer-events:none;transition:opacity .2s}
+.dw-mask.on{opacity:1;pointer-events:auto}
+.dw.w2{width:760px}
+.cap4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:#fafcff}
+.cap4 .sl{font-size:11.5px;color:var(--tx3)}
+.cap4 .sv{font-size:15px;font-weight:600;color:var(--tx);margin-top:3px;font-variant-numeric:tabular-nums}
+.cap4 .sv em{font-style:normal;font-size:11.5px;font-weight:400;color:var(--tx3);margin-left:2px}
+.gt-scroll{overflow-x:auto}
+.gt-inner{min-width:520px}
+.pk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pk-grid .pick{margin-bottom:0}
+@media(max-width:820px){.pk-grid{grid-template-columns:1fr}}
+@media(max-width:820px){.dw-hero .hrow{flex-wrap:wrap}.dw-hero .hb{margin-left:0;justify-content:flex-start;padding-top:0}}
+@media(max-width:560px){.dw-f .sp{display:none}}
+.dw{position:fixed;top:0;right:0;bottom:0;width:520px;max-width:94vw;background:#fff;z-index:71;transform:translateX(103%);transition:transform .26s cubic-bezier(.22,.61,.36,1);display:flex;flex-direction:column;box-shadow:-10px 0 34px rgba(16,24,40,.16)}
+.dw.on{transform:none}
+.dw-h{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dw-h h3{font-size:15px;font-weight:600;flex:1}
+.dw-x{width:30px;height:30px;border-radius:6px;color:var(--tx3);font-size:13px}
+.dw-x:hover{background:var(--gray-bg);color:var(--tx)}
+.dw-b{flex:1;overflow-y:auto;padding:18px 20px}
+.dw-f{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--line)}
+
+/* ---------- 窄屏 ---------- */
+@media(max-width:1280px){ .kpis{grid-template-columns:repeat(3,1fr)} }
+@media(max-width:900px){
+  .wrap{display:block;height:auto;min-height:100vh;overflow:visible}
+  .nav{width:100%;flex:none;flex-direction:row;align-items:center;overflow:hidden;padding:0}
+  .brand{padding:10px 14px;flex:0 0 auto}
+  .btxt,.navfoot{display:none}
+  .navlist{display:flex;gap:4px;padding:6px;overflow-x:auto}
+  .nav button{width:auto;flex:0 0 auto;padding:8px 12px;font-size:12.5px}
+  .nav button .bdg{margin-left:4px}
+  .main{display:block;width:100%;min-height:0}
+  .top{height:auto;flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .body{display:block;overflow:visible}
+  .list{border-right:none;border-bottom:1px solid var(--line)}
+  body.wide .panel{display:block}
+  body{overflow-x:hidden}
+  .main,.panel,.pcard{min-width:0;max-width:100%}
+  .top{overflow:hidden}
+  .navtoggle{display:none}
+  .ibtn span{display:none}
+  .kpis{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .kpi{padding:12px;gap:10px}
+  .kpi .ki{width:38px;height:38px;flex:0 0 38px}
+  .kpi .kv{font-size:22px}
+  .frow3{grid-template-columns:1fr}
+  .fin.w2{flex:1 1 100%}
+  .panel{width:100%;padding:14px;box-sizing:border-box}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="nav">
+    <div class="brand">
+      <span class="bmark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 17l6-9 4 5 3-4 5 8z"/></svg></span>
+      <span class="btxt">生产管理系统<em>车间作业 · 项目 / 设备</em></span>
+    </div>
+    <div class="navlist" id="nav"></div>
+    <div class="navfoot"><span class="dot-g"></span>演示数据 · 2026-09-20</div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <button class="navtoggle" id="navtoggle" onclick="toggleNav()" title="收起 / 展开侧栏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5h16M4 18.5h16M9.8 10.5H20M9.8 13.5H20"/><path d="M9 8.6 4.4 12 9 15.4z" fill="currentColor" stroke="none"/></svg></button>
+      <nav class="crumb" id="crumb"></nav>
+      <div class="sp"></div>
+      <div class="role" id="roles"></div>
+      <button class="ibtn" onclick="toast('暂无新消息')">
+        <span class="icw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><i class="dot">3</i></span>
+        <span>消息</span></button>
+      <span class="vline"></span>
+      <button class="ibtn" onclick="toast('原型演示：帮助中心')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.6-3 4"/><path d="M12 17h.01"/></svg>
+        <span>帮助</span></button>
+      <div class="who" id="who"></div>
+      <div class="avatar" id="avatar">张</div>
+    </header>
+    <div class="body">
+      <div class="list"><div class="lh" id="lh"></div><div class="lb" id="list"></div></div>
+      <div class="panel" id="panel"></div>
+    </div>
+  </div>
+</div>
+<div class="dw-mask" id="dwm" onclick="dwClose()"></div>
+<aside class="dw" id="dw">
+  <div class="dw-h"><h3 id="dwt"></h3><button class="dw-x" onclick="dwClose()">✕</button></div>
+  <div class="dw-b" id="dwb"></div>
+  <div class="dw-f" id="dwf"></div>
+</aside>
+<div id="toast"></div>
+<script>
+/* ============================ 1. 基础字典 ============================ */
+const TODAY = '2026-09-20';
+const WORKSHOPS = ['总装车间','装配车间','铜排车间','机加工车间'];
+
+const PROC = {
+  GX01:{ id:'GX01', name:'元器件安装', price:180, groups:['G1'], ind:false, days:2, note:'按 BOM 安装元器件，紧固力矩符合工艺卡' },
+  GX02:{ id:'GX02', name:'一次线',     price:260, groups:['G2'], ind:false, days:2, note:'主回路电缆制作与压接，相序与图纸一致' },
+  GX03:{ id:'GX03', name:'二次线',     price:300, groups:['G3'], ind:false, days:2, note:'二次接线、号码管、绑扎整齐，与原理图一致' },
+  GX04:{ id:'GX04', name:'铜排',       price:200, groups:['G4'], ind:false, days:2, note:'柜内铜排安装，力矩与绝缘间距符合要求' },
+  GX05:{ id:'GX05', name:'铜排线',     price:320, groups:['G5'], ind:true,  days:2, note:'独立前置工序：铜排下料、折弯、搪锡，开工前先完成' },
+};
+const PROC_LIST = ['GX01','GX02','GX03','GX04','GX05'];
+
+const CRAFT = {
+  GY01:{ id:'GY01', name:'KDC-12 高压柜标准装配工艺', model:'KDC-12', days:10, procs:['GX01','GX02','GX03','GX04'], ind:['GX05'],
+        note:'高压开关柜标准装配：铜排线前置，主链为元器件安装 → 一次线 → 二次线 → 铜排' },
+  GY02:{ id:'GY02', name:'KDC-08 低压柜标准装配工艺', model:'KDC-08', days:6, procs:['GX01','GX02','GX03'], ind:[],
+        note:'低压配电柜装配：元器件安装 → 一次线 → 二次线' },
+  GY03:{ id:'GY03', name:'KDC-05 控制柜装配工艺',     model:'KDC-05', days:4, procs:['GX01','GX03'], ind:[],
+        note:'控制柜装配：元器件安装 → 二次线' },
+  GY04:{ id:'GY04', name:'铜排线单件加工作业工艺',   model:'通用',   days:2, procs:[], ind:['GX05'],
+        note:'只做铜排线单件加工，供其它工艺领用' },
+};
+const CRAFT_LIST = Object.keys(CRAFT);
+
+const GROUPS = [
+  { id:'G1', name:'班组一', procs:['GX01'], color:'#2f5fd0', leader:'E11', station:'1# 工位 · 元器件安装' },
+  { id:'G2', name:'班组二', procs:['GX02'], color:'#0d8ecf', leader:'E21', station:'2# 工位 · 一次线' },
+  { id:'G3', name:'班组三', procs:['GX03'], color:'#7a4fd0', leader:'E31', station:'3# 工位 · 二次线' },
+  { id:'G4', name:'班组四', procs:['GX04'], color:'#b8720a', leader:'E41', station:'4# 工位 · 铜排' },
+  { id:'G5', name:'班组五', procs:['GX05'], color:'#0f7a6c', leader:'E51', station:'独立加工区 · 铜排线' },
+];
+const EMP = [
+  { id:'E11', name:'王志强', g:'G1', leader:1, level:'技师' },
+  { id:'E12', name:'李建国', g:'G1', level:'高级工' },
+  { id:'E13', name:'赵春生', g:'G1', level:'中级工' },
+  { id:'E14', name:'孙磊',   g:'G1', level:'中级工' },
+  { id:'E21', name:'刘振华', g:'G2', leader:1, level:'技师' },
+  { id:'E22', name:'陈立',   g:'G2', level:'高级工' },
+  { id:'E23', name:'周敏',   g:'G2', level:'中级工' },
+  { id:'E31', name:'张海涛', g:'G3', leader:1, level:'技师' },
+  { id:'E32', name:'郑建华', g:'G3', level:'高级工' },
+  { id:'E33', name:'冯磊',   g:'G3', level:'中级工' },
+  { id:'E41', name:'马跃',   g:'G4', leader:1, level:'高级技师' },
+  { id:'E42', name:'田伟',   g:'G4', level:'高级工' },
+  { id:'E51', name:'吴建平', g:'G5', leader:1, level:'技师' },
+  { id:'E52', name:'何俊',   g:'G5', level:'高级工' },
+];
+/* 工序物料：aux=辅料（工位共用、不进个人领料单） */
+const MAT = {
+  GX01:[ {c:'M0101',n:'真空断路器',   sp:'VS1-12/630',   u:'台', per:3,  wh:'A区-01-03'},
+         {c:'M0102',n:'电流互感器',   sp:'LZZBJ9-10',    u:'只', per:3,  wh:'A区-01-05'},
+         {c:'M0103',n:'智能操控装置', sp:'ED-9200',      u:'套', per:1,  wh:'B区-02-11'},
+         {c:'M0106',n:'支撑绝缘子',   sp:'ZJ-10',        u:'只', per:8,  wh:'A区-03-02'},
+         {c:'M0124',n:'不锈钢螺丝',   sp:'M6×20',        u:'套', per:24, wh:'C区-04-05', aux:1} ],
+  GX02:[ {c:'M0201',n:'铜芯电力电缆', sp:'YJV-1×70',     u:'m',  per:20, wh:'C区-01-01'},
+         {c:'M0202',n:'接线端子',     sp:'UK-2.5',       u:'只', per:30, wh:'B区-03-04'},
+         {c:'M0221',n:'热缩管',       sp:'Φ10',          u:'m',  per:5,  wh:'C区-04-02', aux:1} ],
+  GX03:[ {c:'M0301',n:'二次导线',     sp:'BV-1.5mm²',    u:'m',  per:80, wh:'C区-02-01'},
+         {c:'M0302',n:'号码管',       sp:'Φ3.0',         u:'只', per:40, wh:'C区-02-06'},
+         {c:'M0321',n:'尼龙扎带',     sp:'100×2.5',      u:'根', per:20, wh:'C区-04-05', aux:1},
+         {c:'M0322',n:'线鼻子',       sp:'OT-1.5',       u:'只', per:30, wh:'C区-04-06', aux:1} ],
+  GX04:[ {c:'M0401',n:'铜排',         sp:'TMY-60×6',     u:'kg', per:12, wh:'D区-01-02'},
+         {c:'M0402',n:'绝缘支撑',     sp:'ZJ-10/30',     u:'只', per:6,  wh:'A区-03-02'},
+         {c:'M0421',n:'热缩套管',     sp:'Φ25',          u:'m',  per:4,  wh:'C区-04-02', aux:1} ],
+  GX05:[ {c:'M0501',n:'铜排',         sp:'TMY-80×8',     u:'kg', per:30, wh:'D区-01-05'},
+         {c:'M0521',n:'搪锡剂',       sp:'500ml',        u:'瓶', per:1,  wh:'C区-05-01', aux:1} ],
+};
+const SELF_CHECK = ['柜体外观无损伤、标识齐全','元器件型号与 BOM 一致','一次回路力矩符合工艺卡','二次接线与图纸一致、绑扎整齐','绝缘电阻测试合格','接地连续可靠'];
+
+/* ============================ 2. 项目与设备 ============================ */
+const PROJ = [
+  { id:'MO-20260912-01', name:'陕西煤矿皮带集控系统',      cus:'陕西煤业化工集团', product:'KDC-12 高压开关柜', model:'KDC-12', qty:8,  craft:'GY01', ws:'总装车间', due:'2026-10-08', st:'pending_review',
+    type:'生产任务', amount:1286000, level:'紧急', rep:'李伟', created:'2026-08-28' },
+  { id:'MO-20260917-01', name:'河南郑州数据中心配电工程',  cus:'中原数据科技',     product:'KDC-08 低压配电柜', model:'KDC-08', qty:6,  craft:'GY02', ws:'总装车间', due:'2026-10-12', st:'reviewed',
+    type:'生产任务', amount:960000,  level:'普通', rep:'王芳', created:'2026-09-02' },
+  { id:'MO-20260915-01', name:'山东临沂化工园区 10kV 配电', cus:'临沂化工园区管委会', product:'KDC-12 高压开关柜', model:'KDC-12', qty:6,  craft:'GY01', ws:'总装车间', due:'2026-10-05', st:'scheduled',
+    type:'生产任务', amount:864000,  level:'紧急', rep:'陈静', created:'2026-08-20' },
+  { id:'MO-20260914-01', name:'陕西煤矿皮带集控（增补柜）', cus:'陕西煤业化工集团', product:'KDC-05 控制柜',     model:'KDC-05', qty:2,  craft:'GY03', ws:'装配车间', due:'2026-09-28', st:'assigned',
+    type:'生产任务', amount:228000,  level:'普通', rep:'李伟', created:'2026-09-05' },
+  { id:'MO-20260913-01', name:'宁夏水厂泵站控制系统',      cus:'宁夏水务投资集团', product:'KDC-12 高压开关柜', model:'KDC-12', qty:4,  craft:'GY01', ws:'总装车间', due:'2026-09-26', st:'producing',
+    type:'生产任务', amount:642000,  level:'普通', rep:'王磊', created:'2026-08-15' },
+  { id:'MO-20260828-01', name:'山东化工园区供电工程',      cus:'山东化工集团',     product:'KDC-08 低压配电柜', model:'KDC-08', qty:10, craft:'GY02', ws:'总装车间', due:'2026-09-18', st:'producing',
+    type:'生产任务', amount:1380000, level:'紧急', rep:'王芳', created:'2026-08-06' },
+  { id:'MO-20260805-01', name:'山西晋城煤化工低压配电',    cus:'晋城煤化工集团',   product:'KDC-08 低压配电柜', model:'KDC-08', qty:4,  craft:'GY02', ws:'总装车间', due:'2026-09-05', st:'inbounded',
+    type:'生产任务', amount:512000,  level:'普通', rep:'王磊', created:'2026-07-22' },
+  { id:'MO-20260906-01', name:'内蒙包头铝业控制柜',        cus:'包头铝业集团',     product:'KDC-05 控制柜',     model:'KDC-05', qty:3,  craft:'GY03', ws:'装配车间', due:'2026-10-18', st:'rejected',
+    type:'生产任务', amount:186000,  level:'紧急', rep:'陈静', created:'2026-09-06' },
+];
+const TECH_DOCS = [
+  { t:'装配图纸',   n:'3 份', page:'A0 ×3' },
+  { t:'BOM 清单',   n:'68 项', page:'Excel ×1' },
+  { t:'技术方案',   n:'1 份', page:'PDF ×1' },
+  { t:'工艺路线',   n:'1 条', page:'PDF ×1' },
+  { t:'技术要求',   n:'1 份', page:'PDF ×1' },
+];
+/* 设备：一台柜 = 一台设备；steps = 这台设备要走的工序（含独立工序） */
+const DEV = [];
+const DEV_CTR = {};                                // 同型号全局连续编号，保证设备编号唯一
+/* 一台设备按工艺路线展开出的工序链（独立工序排在最前） */
+function mkSteps(craftId){
+  const cf=CRAFT[craftId]||{ procs:[], ind:[] };
+  const order=[].concat(cf.ind||[], cf.procs||[]).filter(pid=>PROC[pid]);
+  return order.map(pid=>({ p:pid, g:'', e:'', d:'', st:'todo', ok:0, inst:0, ps:'', pe:'' }));
+}
+/* 给一个项目生成设备（立项审核通过后新增项目时复用） */
+function mkDevices(p){
+  for(let i=1;i<=p.qty;i++){
+    DEV_CTR[p.model]=(DEV_CTR[p.model]||0)+1;
+    const no=String(DEV_CTR[p.model]).padStart(2,'0'), sn=String(i).padStart(2,'0');
+    DEV.push({
+      sn:`${p.model}-${no}`, seq:`${p.id.replace(/\D/g,'').slice(-8)}-${sn}`,
+      proj:p.id, model:p.model, planStart:'', planEnd:'', ws:'', gids:[],
+      steps: mkSteps(p.craft),
+      inbound:'', self:{ by:'', at:'', items:{} }, qc:'',
+    });
+  }
+}
+function buildDevices(){ PROJ.forEach(mkDevices); }
+buildDevices();
+
+/* 销售提交的项目立项申请：生产主任核产能后决定接不接 */
+const LIXIANG = [
+  { id:'LX-20260919-01', name:'江苏南通化工园区低压配电改造', cus:'南通化工园区管委会', product:'KDC-08 低压配电柜', model:'KDC-08', qty:8,
+    wantStart:'2026-10-06', wantEnd:'2026-10-20', sales:'陈静（销售部）', at:'2026-09-19 16:20',
+    note:'客户要求 10 月 20 日前到货，现场安装窗口 10 月 22 日开始', st:'pending' },
+  { id:'LX-20260918-01', name:'河北邢台钢铁厂控制柜增补', cus:'邢台钢铁集团', product:'KDC-05 控制柜', model:'KDC-05', qty:4,
+    wantStart:'2026-09-28', wantEnd:'2026-10-10', sales:'王磊（销售部）', at:'2026-09-18 10:05',
+    note:'产线改造紧急增补，希望 10 月上旬到货', st:'pending' },
+];
+
+/* ============================ 3. 业务单据 ============================ */
+let SEQ = { PG:2, LL:2, RK:1, DB:0 };
+const DISPATCH = [];   // 派工单：{ id, proj, proc, group, devs:[sn], workers:[{emp,devs:[sn],mats:[{c,q}]}], aux:[{c,q}], start, end, st }
+const REPORT = [];     // 报工记录：{ id, dev, proc, emp, date, inst, ok, bad, note }
+const PICK = [];       // 领料单：{ no, dispId, emp, items:[{c,n,q,wh}], st }
+const TRANSFER = [];   // 人员调配/调班记录：{ id, at, dispId, proj, proc, from, to, devs, mats, reason, by }
+
+/* ---- 预置：已派单（MO-20260914-01 两道工序已派给班组） ---- */
+function preset(){
+  const setG=(sn,pid,gid)=>{ const d=DEV.find(x=>x.sn===sn); const s=d.steps.find(x=>x.p===pid); if(s) s.g=gid; };
+  // 晋城煤化工：已完成并全部入库
+  DEV.filter(d=>d.proj==='MO-20260805-01').forEach(d=>{
+    d.planStart='2026-07-28'; d.planEnd='2026-08-12'; d.ws='总装车间'; d.gids=['G1','G2','G3'];
+    d.steps.forEach(s=>{ s.g=procGroups(s.p)[0]||'G1'; s.e=(GROUPS.find(g=>g.id===s.g)||{}).leader; s.st='done'; s.ok=1; });
+    d.inbound='RK-20260815-001'; d.self={ by:'王志强', at:'2026-08-15 16:40', items:{0:1,1:1,2:1,3:1,4:1,5:1} }; d.qc='合格';
+  });
+  // 山东临沂（scheduled）：已排产 → 设备都有排产时间
+  DEV.filter(d=>d.proj==='MO-20260915-01').forEach(d=>{ d.planStart='2026-09-22'; d.planEnd='2026-09-29'; d.ws='总装车间'; d.gids=['G1','G2','G3','G4','G5']; });
+  // 增补柜（assigned）：已排产 + 已派单
+  DEV.filter(d=>d.proj==='MO-20260914-01').forEach(d=>{
+    d.planStart='2026-09-21'; d.planEnd='2026-09-25'; d.ws='装配车间'; d.gids=['G1','G3'];
+    setG(d.sn,'GX01','G1'); setG(d.sn,'GX03','G3');
+  });
+  // 宁夏水厂（producing）：已派单 + 已派工 + 有报工
+  DEV.filter(d=>d.proj==='MO-20260913-01').forEach((d,i)=>{
+    d.planStart='2026-09-08'; d.planEnd='2026-09-24'; d.ws='总装车间'; d.gids=['G1','G2','G3','G4','G5'];
+    ['GX05','GX01','GX02','GX03','GX04'].forEach(pid=>setG(d.sn,pid,procGroups(pid)[0]||'G1'));
+    // 铜排线 + 元器件安装已派工给具体人
+    const s1=d.steps.find(x=>x.p==='GX05'), s2=d.steps.find(x=>x.p==='GX01');
+    s1.g='G5'; s1.e='E51'; s1.d='PG-20260908-001'; s1.st='done'; s1.ok=1; s1.inst=1;
+    s2.g='G1'; s2.e=(i%2===0?'E12':'E13'); s2.d='PG-20260910-001'; s2.st=(i<2?'done':'doing');
+    if(i<2){ s2.ok=1; s2.inst=3; }
+  });
+  // 山东化工（producing，10 台，8 台已入库）
+  DEV.filter(d=>d.proj==='MO-20260828-01').forEach((d,i)=>{
+    d.planStart='2026-08-29'; d.planEnd='2026-09-16'; d.ws='总装车间'; d.gids=['G1','G2','G3'];
+    ['GX01','GX02','GX03'].forEach(pid=>setG(d.sn,pid,procGroups(pid)[0]||'G1'));
+    d.steps.forEach(s=>{ s.e=GROUPS.find(g=>g.id===s.g).leader; s.d='PG-20260829-001'; s.st='done'; s.ok=1; s.inst=Math.round(MAT[s.p][0].per||1); });
+    if(i<8){ d.inbound='RK-20260916-001'; d.self={ by:'王志强', at:'2026-09-16 17:20', items:{0:1,1:1,2:1,3:1,4:1,5:1} }; d.qc='合格'; }
+  });
+  DISPATCH.push(
+    { id:'PG-20260908-001', proj:'MO-20260913-01', proc:'GX05', group:'G5', devs:DEV.filter(d=>d.proj==='MO-20260913-01').map(d=>d.sn),
+      workers:[{ emp:'E51', devs:DEV.filter(d=>d.proj==='MO-20260913-01').map(d=>d.sn), mats:[{c:'M0501',q:120}] }],
+      aux:[{c:'M0521',q:4}], start:'2026-09-06', end:'2026-09-08', st:'done' },
+    { id:'PG-20260910-001', proj:'MO-20260913-01', proc:'GX01', group:'G1', devs:DEV.filter(d=>d.proj==='MO-20260913-01').map(d=>d.sn),
+      workers:[{ emp:'E12', devs:[], mats:[{c:'M0101',q:6},{c:'M0102',q:6},{c:'M0103',q:2}] },
+               { emp:'E13', devs:[], mats:[{c:'M0101',q:6},{c:'M0102',q:6},{c:'M0103',q:2}] }],
+      aux:[{c:'M0124',q:96}], start:'2026-09-10', end:'2026-09-14', st:'doing' },
+    { id:'PG-20260829-001', proj:'MO-20260828-01', proc:'GX01', group:'G1', devs:DEV.filter(d=>d.proj==='MO-20260828-01').map(d=>d.sn),
+      workers:[{ emp:'E11', devs:DEV.filter(d=>d.proj==='MO-20260828-01').map(d=>d.sn), mats:[{c:'M0101',q:30},{c:'M0102',q:30},{c:'M0103',q:10}] }],
+      aux:[{c:'M0124',q:240}], start:'2026-08-29', end:'2026-09-05', st:'done' }
+  );
+  PICK.push({ no:'LL-20260910-001', dispId:'PG-20260910-001', emp:'E12', items:[{c:'M0101',n:'真空断路器',q:6,wh:'A区-01-03'}], st:'done' });
+  const nx=DEV.filter(d=>d.proj==='MO-20260913-01')[0];
+  REPORT.push({ id:'RB-01', dev:nx.sn, proc:'GX01', emp:'E12', date:'2026-09-18', inst:3, ok:3, bad:0, note:'元器件安装完成' });
+}
+preset();
+
+/* ============================ 4. 会话状态 ============================ */
+const S = {
+  role:'director', page:'proj',
+  cur:null,            // 左列表选中的 id
+  sel:[],              // 右面板里勾选的设备 sn
+  sub:null,            // 子视图（如派工的第二步）
+  wiz:null,            // 派工向导临时数据
+  checks:{},           // 审核页：技术文件核对
+  rep:{},              // 报工表单
+};
+const emp = id => EMP.find(e=>e.id===id)||{name:'—'};
+const grp = id => GROUPS.find(g=>g.id===id)||{name:'—'};
+const proj = id => PROJ.find(p=>p.id===id);
+const dev  = sn => DEV.find(d=>d.sn===sn);
+const devOf = pid => DEV.filter(d=>d.proj===pid);
+let __lastPage=null;      // 上次渲染的页面（用于切页时清空选中项）
+/* ============================ 5. 工具 ============================ */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg,type){
+  const el=document.createElement('div');
+  el.className=type||''; el.textContent=msg;
+  $('toast').appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); },2400);
+}
+function money(n){ return '¥'+Math.round(n).toLocaleString('zh-CN'); }
+function addD(d,n){
+  const t=new Date(d+'T00:00:00');
+  t.setDate(t.getDate()+n);
+  const q=x=>String(x).padStart(2,'0');
+  return t.getFullYear()+'-'+q(t.getMonth()+1)+'-'+q(t.getDate());   // 不能 toISOString：会按 UTC 差一天
+}
+function nextNo(prefix){ SEQ[prefix]=(SEQ[prefix]||0)+1; return prefix+'-'+TODAY.replace(/-/g,'')+'-'+String(SEQ[prefix]).padStart(3,'0'); }
+function initials(name){ return String(name||'').slice(-2); }
+
+/* ============================ 6. 状态推导 ============================ */
+function devState(d){
+  if(d.inbound) return { t:'已入库', c:'ok' };
+  if(d.steps.every(s=>s.st==='done')) return { t:'已完工', c:'ok' };
+  if(!d.planStart) return { t:'待排产', c:'' };
+  if(d.steps.some(s=>!s.g)) return { t:'待派单', c:'pri' };
+  if(d.steps.some(s=>s.g&&!s.e)) return { t:'待派工', c:'warn' };
+  if(d.steps.some(s=>s.st==='doing'||s.st==='done')) return { t:'在制', c:'pri' };
+  return { t:'待开工', c:'' };
+}
+function devPct(d){
+  const n=d.steps.length; if(!n) return 0;
+  return Math.round(d.steps.filter(s=>s.st==='done').length/n*100);
+}
+function devCurStep(d){
+  // 当前工序 = 已派工且未完工的第一道；都没派工时退回第一道未完工工序（只用于展示）
+  return d.steps.find(s=>s.e&&s.st!=='done') || d.steps.find(s=>s.st!=='done') || null;
+}
+function projStats(p){
+  const ds=devOf(p.id), n=ds.length;
+  return {
+    n,
+    planned: ds.filter(d=>d.planStart).length,
+    assigned: ds.filter(d=>d.steps.every(s=>s.g)).length,
+    worked: ds.filter(d=>d.steps.every(s=>s.e)).length,
+    done: ds.filter(d=>d.steps.every(s=>s.st==='done')).length,
+    inbound: ds.filter(d=>d.inbound).length,
+    pct: n? Math.round(ds.reduce((a,d)=>a+devPct(d),0)/n) : 0,
+  };
+}
+function projStateLabel(p){
+  const s=projStats(p);
+  if(p.st==='pending_review') return { t:'待审核', c:'err' };
+  if(p.st==='rejected') return { t:'已退回', c:'err' };
+  if(s.inbound===s.n && s.n) return { t:'已入库', c:'ok' };
+  if(s.done===s.n && s.n) return { t:'待检验', c:'ok' };
+  if(s.worked===s.n && s.n) return { t:'生产中', c:'pri' };
+  if(s.assigned===s.n && s.n) return { t:'待派工', c:'warn' };
+  if(s.planned===s.n && s.n) return { t:'待派单', c:'pri' };
+  if(s.planned>0) return { t:'部分排产', c:'pri' };
+  return { t:'待排产', c:'' };
+}
+/* 待办计数 */
+function counts(){
+  const pendProj=LIXIANG.filter(x=>x.st==='pending').length;
+  const pendAudit=PROJ.filter(p=>p.st==='pending_review').length;
+  const pendPlan=PROJ.filter(p=>['reviewed','scheduled','assigned','producing'].includes(p.st) && devOf(p.id).some(d=>!d.planStart)).length;
+  const pendAssign=PROJ.filter(p=>devOf(p.id).some(d=>d.planStart&&d.steps.some(s=>!s.g))).length;
+  const pendWork=PROJ.filter(p=>devOf(p.id).some(d=>d.steps.some(s=>s.g&&!s.e))).length;
+  const late=PROJ.filter(p=>p.due<TODAY && projStats(p).inbound<projStats(p).n).length;
+  const pendReport=DEV.filter(d=>!d.inbound && !d.steps.every(s=>s.st==='done') && d.steps.some(s=>s.st==='doing')).length;
+  const pendIn=DEV.filter(d=>!d.inbound && d.steps.every(s=>s.st==='done')).length;
+  return { pendProj, pendAudit, pendPlan, pendAssign, pendWork, late, pendReport, pendIn };
+}
+
+/* 产能窗口：某段日期内每天在排产的设备台数（立项审核的产能评估用） */
+function windowLoad(start,end){
+  const rows=[]; let d=start, guard=0;
+  while(d<=end && guard++<400){
+    const devs=DEV.filter(x=>x.planStart && d>=x.planStart && d<=x.planEnd);
+    rows.push({ d, n:devs.length, projs:[...new Set(devs.map(x=>x.proj))] });
+    d=addD(d,1);
+  }
+  const peak=rows.reduce((a,r)=>Math.max(a,r.n),0);
+  return { rows, peak, avg:Math.round(rows.reduce((a,r)=>a+r.n,0)/(rows.length||1)) };
+}
+/* 按自然周汇总 */
+function weekLoad(start,end){
+  const out=[]; let d=start, guard=0;
+  while(d<=end && guard++<120){
+    const sun=addD(d,6), e2=sun>end?end:sun;
+    const ld=windowLoad(d,e2);
+    out.push({ from:d, to:e2, peak:ld.peak, avg:ld.avg, projs:[...new Set(ld.rows.flatMap(r=>r.projs))] });
+    d=addD(sun,1);
+  }
+  return out;
+}
+function loadBar(v,max,tone){
+  const pct=max?Math.max(3,Math.round(v/max*100)):0;
+  return `<div class="bar" style="width:150px;display:inline-block;vertical-align:middle"><i class="${tone||''}" style="width:${pct}%"></i></div>`;
+}
+
+/* ---- 日期与窗口工具（排产甘特 / 负荷分析） ---- */
+function dEnc(d){ const a=String(d).split('-').map(Number); return Date.UTC(a[0],a[1]-1,a[2]); }
+function daysBetween(a,b){ if(!a||!b) return 0; return Math.round((dEnc(b)-dEnc(a))/86400000); }
+function isWorkday(d){ const a=String(d).split('-').map(Number); const w=new Date(Date.UTC(a[0],a[1]-1,a[2])).getUTCDay(); return w>=1&&w<=5; }
+function workdaysBetween(from,to){ let n=0; const total=daysBetween(from,to)+1;
+  for(let i=0;i<total&&i<400;i++){ if(isWorkday(addD(from,i))) n++; } return n; }
+/* 甘特图：rows=[{label,sub,start,end,tag,cls}] */
+function ganttHtml(from,to,rows){
+  if(!from||!to) return '<div class="empty">请先填写计划日期</div>';
+  if(daysBetween(from,to)<0){ const t=from; from=to; to=t; }
+  const total=Math.max(1,daysBetween(from,to)+1), dayPct=100/total;
+  const ticks=[]; for(let i=0;i<total&&i<400;i+=7) ticks.push({ d:addD(from,i), left:i*dayPct });
+  const grid=`background-image:linear-gradient(to right,#eef0f3 1px,transparent 1px);background-size:${dayPct.toFixed(3)}% 100%`;
+  const tm=(TODAY>=from&&TODAY<=to)? (daysBetween(from,TODAY)*dayPct).toFixed(2) : null;
+  return `<div class="gt">
+    <div class="gt-row gt-scale">
+      <div class="gt-lab">日期</div>
+      <div class="gt-track" style="height:24px">${ticks.map(t=>`<span class="gt-tick" style="left:${t.left.toFixed(2)}%">${t.d.slice(5)}</span>`).join('')}</div>
+    </div>
+    ${rows.map(r=>{
+      const o=Math.max(0,Math.min(total-1,daysBetween(from,r.start)));
+      const len=Math.max(1,Math.min(total-o,daysBetween(r.start,r.end)+1));
+      return `<div class="gt-row">
+        <div class="gt-lab"><div class="t" title="${esc(r.label)}">${esc(r.label)}</div><div class="s">${r.sub||''}</div></div>
+        <div class="gt-track" style="${grid}">
+          ${tm!==null?`<div class="gt-mark" style="left:${tm}%"></div>`:''}
+          <div class="gt-bar ${r.cls||''}" style="left:${(o*dayPct).toFixed(2)}%;width:${(len*dayPct).toFixed(2)}%">${esc(r.tag||'')}</div>
+        </div></div>`;
+    }).join('')}
+  </div>`;
+}
+/* 一段窗口内、排产时间与窗口有交集的设备（可排除某项目） */
+function devsInWindow(from,to,excludePid){
+  return DEV.filter(d=> d.planStart&&d.planEnd && d.planStart<=to && d.planEnd>=from
+    && (!excludePid||d.proj!==excludePid));
+}
+/* 逐天负荷 */
+function dayLoadRows(from,to,excludePid){
+  if(daysBetween(from,to)<0) return { rows:[], peak:0, avg:0 };
+  const devs=devsInWindow(from,to,excludePid), total=Math.max(1,daysBetween(from,to)+1), rows=[];
+  for(let i=0;i<total&&i<400;i++){
+    const d=addD(from,i), hit=devs.filter(x=>x.planStart<=d&&x.planEnd>=d);
+    rows.push({ d, n:hit.length, projs:[...new Set(hit.map(x=>x.proj))] });
+  }
+  const sum=rows.reduce((a,r)=>a+r.n,0);
+  return { rows, peak:rows.reduce((a,r)=>Math.max(a,r.n),0), avg:Math.round(sum/(rows.length||1)) };
+}
+/* 班组在某窗口内的工作量：按设备的排产窗口 ∩ 工序归属估算（派单后以工序计划为准） */
+function groupWorkload(gid, from, to, excludePid){
+  let cells=0; const sns=[], projs=[];
+  DEV.forEach(d=>{
+    if(!d.planStart||!d.planEnd) return;
+    if(d.planStart>to||d.planEnd<from) return;
+    if(excludePid&&d.proj===excludePid) return;
+    d.steps.forEach(st=>{ const owner=st.g||procGroups(st.p)[0];
+      if(owner===gid){ cells++; if(sns.indexOf(d.sn)<0) sns.push(d.sn); if(projs.indexOf(d.proj)<0) projs.push(d.proj); } });
+  });
+  return { gid, cells, devs:sns, projs };
+}
+
+/* ============================ 7. 通用组件 ============================ */
+function badge(t,c){ return `<span class="badge ${c||''}">${esc(t)}</span>`; }
+function kv(k,v){ return `<div class="kv"><div class="k">${esc(k)}</div><div class="v">${v}</div></div>`; }
+function ring(pct,size){
+  size=size||44; const r=(size-6)/2, c=2*Math.PI*r, off=c*(1-pct/100);
+  return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#eef0f3" stroke-width="5"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${pct>=100?'#1a7f52':'#2f5fd0'}" stroke-width="5"
+      stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${size/2} ${size/2})"/>
+    <text x="${size/2}" y="${size/2}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1f2328" font-weight="600">${pct}%</text></svg>`;
+}
+function stepbar(d){
+  return `<div class="stepbar">${d.steps.map(s=>`<i class="${s.st==='done'?'done':(s.st==='doing'?'doing':'')}" title="${PROC[s.p].name} · ${s.st==='done'?'完工':s.st==='doing'?'在制':'未开工'}"></i>`).join('')}</div>`;
+}
+function stepChips(d){
+  return `<div class="chips">${d.steps.map(s=>{
+    const p=PROC[s.p], g=s.g?grp(s.g):null, n=(s.es&&s.es.length)||0;
+    const e=s.e?emp(s.e).name+(n>1?' 等 '+n+' 人':''):null;
+    const cls=s.st==='done'?'ok':(s.st==='doing'?'warn':'');
+    const txt=`${p.ind?'◆ ':''}${p.name}${g?' · '+g.name:''}${e?' · '+e:''}`;
+    return `<span class="badge ${cls}">${s.st==='done'?'✓ ':''}${esc(txt)}</span>`;
+  }).join('')}</div>`;
+}
+function litem(onClick,title,sub,right,cls){
+  return `<div class="ls ${cls||''}" onclick="${onClick}">
+    <div class="m"><div class="t">${title}</div><div class="s">${sub}</div></div>
+    ${right?`<div class="r">${right}</div>`:''}</div>`;
+}
+function stat(l,n){ return `<div class="stat"><div class="l">${l}</div><div class="n">${n}</div></div>`; }
+function hbar(items){
+  return `<div class="stats">${items.map(x=>stat(x[0],x[1])).join('')}</div>`;
+}
+/* 可勾选的设备条目 */
+/* 谁能做这道工序：以「工序管理」里维护的 PROC[pid].groups 为准（可多选 → 支持一组多工序/跨组支援） */
+function procGroups(pid){
+  const p=PROC[pid]; if(!p) return [];
+  if(p.groups&&p.groups.length) return p.groups.slice();
+  return p.group? [p.group] : [];                  // 兼容历史单值写法
+}
+function groupCanDo(gid,pid){ return procGroups(pid).includes(gid); }
+/* 工序被哪些工艺路线使用 */
+function procUsedIn(pid){
+  return CRAFT_LIST.filter(cid=>{ const c=CRAFT[cid]||{};
+    return (c.procs||[]).includes(pid)||(c.ind||[]).includes(pid); });
+}
+/* 工艺路线涉及到的所有班组 = 排产时默认的「参与班组」 */
+function craftGroups(craftId){
+  const cf=CRAFT[craftId]||{};
+  const pids=[].concat(cf.procs||[], cf.ind||[]);
+  const gs=pids.flatMap(pid=>procGroups(pid));
+  return [...new Set(gs)].length? [...new Set(gs)] : [GROUPS[0].id];
+}
+/* 一批设备的参与班组（可多个）：设备已设过就用它，否则按工艺路线全部带出 */
+function devListOf(sel){ return (sel||[]).map(x=>typeof x==='string'? dev(x) : x).filter(Boolean); }
+function leadGroupsOf(sel, craftId){
+  const hit=devListOf(sel).find(d=>(d.gids||[]).length);
+  return hit? hit.gids.slice() : craftGroups(craftId);
+}
+/* 派单时某道工序的可选班组 = 参与班组 ∩ 会做这道工序的组；交集为空则退回「全部会做的组」并标记冲突 */
+function candGroups(pid, sel, craftId){
+  const parts=leadGroupsOf(sel, craftId);
+  const can=GROUPS.filter(g=>groupCanDo(g.id,pid)).map(g=>g.id);
+  const hit=can.filter(g=>parts.includes(g));
+  return { list:hit.length?hit:can, narrowed:hit.length>0, parts, can, conflict:!hit.length };
+}
+function devPick(d,on,right,dis){
+  const st=devState(d);
+  return `<div class="pick ${on?'on':''} ${dis?'dis':''}" ${dis?'':`onclick="toggle('${d.sn}')"`}>
+    <div class="box">${on?'✓':''}</div>
+    <div class="m"><div class="t">${d.sn}</div>
+      <div class="s">出厂 ${d.seq}${d.planStart?' · 排产 '+d.planStart+' ~ '+d.planEnd:' · 未排产'}${(d.gids||[]).length?' · 参与班组 '+d.gids.map(g=>grp(g).name).join('、'):''}</div></div>
+    <div class="r">${right||badge(st.t,st.c)}</div></div>`;
+}
+/* ============================ 8. 主任端页面 ============================ */
+function projItem(p,extra){
+  const st=projStateLabel(p), s=projStats(p);
+  return litem(`pick('${p.id}')`, esc(p.name),
+    `${p.id} · ${esc(p.product)} ×${s.n} 台 · 交期 ${p.due}`,
+    `<b>${s.pct}%</b>${badge(st.t,st.c)}`, S.cur===p.id?'on':'');
+}
+function projHead(p){
+  const s=projStats(p), st=projStateLabel(p);
+  return `<div class="card"><h4>${esc(p.name)} <span class="sp">${p.id}</span>${badge(st.t,st.c)}</h4>
+    ${kv('客户',esc(p.cus))}${kv('产品',esc(p.product)+' ×'+s.n+' 台')}
+    ${kv('工艺路线',esc(CRAFT[p.craft].name))}${kv('生产车间',esc(p.ws))}
+    ${kv('合同交期','<b>'+p.due+'</b>'+(p.due<TODAY&&s.inbound<s.n?' '+badge('已超期','err'):''))}
+    ${kv('排产时间',p.planned?esc(devOf(p.id).filter(d=>d.planStart)[0].planStart)+' ~ '+esc(devOf(p.id).filter(d=>d.planEnd).slice(-1)[0].planEnd):'—')}
+    ${p.from?kv('来源',esc(p.from)):''}
+    </div>`;
+}
+
+/* ---------- 待办 ---------- */
+const TODO_DEF = [
+  ['proj','项目立项审核','销售提交的新项目，核产能后决定接不接','去审核'],
+  ['audit','任务书待审核','技术部下发，需逐份核对图纸 / BOM / 工艺','去审核'],
+  ['plan','设备待排产','已审核通过，给设备定开工与完工','去排产'],
+  ['assign','设备待派单','已排产，把设备的工序交给班组','去派单'],
+  ['work','设备待派工','已派单，组长把设备分给组员','去派工'],
+  ['report','待报工','在制设备，每天报进度与件数','去报工'],
+  ['inbound','待检验入库','工序已完工，自检后入生产库','去入库'],
+  ['late','交期风险','交期已过或临期，尚未全部入库','去跟踪'],
+];
+function viewTodo(){
+  const c=counts();
+  const map={ proj:c.pendProj, audit:c.pendAudit, plan:c.pendPlan, assign:c.pendAssign, work:c.pendWork, report:c.pendReport, inbound:c.pendIn, late:c.late };
+  const list=TODO_DEF.map(t=>litem(`pick('${t[0]}')`,t[1],t[2],`<b>${map[t[0]]}</b>`,S.cur===t[0]?'on':'')).join('');
+  let panel='';
+  const k=S.cur||'audit';
+  const def=TODO_DEF.find(t=>t[0]===k);
+  if(k==='proj'){
+    const pend=LIXIANG.filter(x=>x.st==='pending');
+    panel=`<div class="ph"><div class="crumb">待办</div><h2>项目立项审核</h2>
+      <p>销售提交的新项目，先核产能（该项目时间窗内前后两周的排产占用）再决定接不接 · 待审 ${pend.length} 个</p></div>
+      <div class="card"><h4>立项申请 <span class="sp">点条目进入审核</span></h4>
+      ${LIXIANG.map(x=>`<div class="prow" onclick="go('projaudit','${x.id}')">
+        <div class="av">${x.qty}</div>
+        <div class="m"><div class="t">${esc(x.name)}</div>
+          <div class="s">${x.id} · ${esc(x.product)} ×${x.qty} 台 · 希望 ${x.wantStart} ~ ${x.wantEnd} · ${esc(x.sales)}</div></div>
+        <div class="r">${x.st==='pending'?'<span class="lnk">去审核 →</span>':badge(x.st==='passed'?'已通过':'已驳回',x.st==='passed'?'ok':'err')}</div>
+      </div>`).join('')||'<div class="empty">没有立项申请</div>'}
+      </div>`;
+    return { lh:['待办','按类型看今天要处理什么'], list, panel };
+  }
+  let rows=[];
+  if(k==='audit') rows=PROJ.filter(p=>p.st==='pending_review');
+  else if(k==='plan') rows=PROJ.filter(p=>['reviewed','scheduled','assigned','producing'].includes(p.st)&&devOf(p.id).some(d=>!d.planStart));
+  else if(k==='assign') rows=PROJ.filter(p=>devOf(p.id).some(d=>d.planStart&&d.steps.some(s=>!s.g)));
+  else if(k==='work') rows=PROJ.filter(p=>devOf(p.id).some(d=>d.steps.some(s=>s.g&&!s.e)));
+  else if(k==='report') rows=PROJ.filter(p=>devOf(p.id).some(d=>!d.inbound&&d.steps.some(s=>s.st==='doing')));
+  else if(k==='inbound') rows=PROJ.filter(p=>devOf(p.id).some(d=>!d.inbound&&d.steps.every(s=>s.st==='done')));
+  else if(k==='late') rows=PROJ.filter(p=>p.due<TODAY&&projStats(p).inbound<projStats(p).n);
+  panel=`<div class="ph"><div class="crumb">待办</div><h2>${def[1]}</h2><p>${def[2]} · 共 ${rows.length} 个项目</p></div>
+    <div class="card"><h4>项目清单</h4>
+    ${rows.length?rows.map(p=>{ const s=projStats(p);
+      const dest=k==='plan'?`openPlan('${p.id}')`:`go('${k==='audit'?'audit':k==='assign'?'assign':k==='work'?'work':k==='report'?'report':k==='inbound'?'inbound':'track'}','${p.id}')`;
+      return `<div class="prow" onclick="${dest}">
+        <div class="av">${s.pct}%</div><div class="m"><div class="t">${esc(p.name)}</div>
+        <div class="s">${p.id} · ${s.n} 台 · 已完工 ${s.done} 台 · 交期 ${p.due}</div></div>
+        <div class="r"><span class="lnk">${def[3]} →</span></div></div>`;}).join('')
+      :'<div class="empty">这一类今天没有待办</div>'}
+    </div>`;
+  return { lh:['待办','按类型看今天要处理什么'], list, panel };
+}
+
+/* ---------- 项目管理（看板） ---------- */
+function pfState(){ return S.pf || (S.pf={ kw:'',no:'',cus:'',type:'all',st:'all',kpi:'all',open:true,page:1,size:10 }); }
+function projLevelTag(l){ return `<span class="badge ${l==='紧急'?'err':''}">${esc(l)}</span>`; }
+function projTag(st){
+  const c = st==='已退回' ? 'err' : st==='待审核' ? 'warn' : st==='待派工' ? 'warn'
+    : (st==='待检验'||st==='已入库') ? 'ok' : (st==='待派单'||st==='生产中'||st==='部分排产') ? 'pri' : '';
+  return `<span class="badge ${c}">${esc(st)}</span>`;
+}
+function kpiHit(p,k){
+  if(!k||k==='all') return true;
+  if(k==='待审核') return p.st==='pending_review';
+  if(k==='执行中') return ['scheduled','assigned','producing'].includes(p.st);
+  if(k==='已退回') return p.st==='rejected';
+  if(k==='已完成'){ const s=projStats(p); return s.n>0 && s.inbound===s.n; }
+  return true;
+}
+function projFiltered(){
+  const f=pfState();
+  return PROJ.filter(p=>{
+    if(!kpiHit(p,f.kpi)) return false;
+    if(f.type!=='all' && p.type!==f.type) return false;
+    if(f.st!=='all' && projStateLabel(p).t!==f.st) return false;
+    if(f.kw && p.name.indexOf(f.kw)<0) return false;
+    if(f.no && p.id.indexOf(f.no)<0) return false;
+    if(f.cus && p.cus.indexOf(f.cus)<0) return false;
+    return true;
+  });
+}
+function pfFind(){
+  const f=pfState();
+  f.kw=(val('fKw')||'').trim(); f.no=(val('fNo')||'').trim(); f.cus=(val('fCus')||'').trim();
+  f.type=val('fType')||'all'; f.st=val('fSt')||'all'; f.page=1; renderPanel();
+}
+function pfReset(){ S.pf={ kw:'',no:'',cus:'',type:'all',st:'all',kpi:'all',open:true,page:1,size:pfState().size }; renderPanel(); }
+function pfToggle(){ const f=pfState(); f.open=!f.open; renderPanel(); }
+function pfKpi(k){ const f=pfState(); f.kpi=(f.kpi===k?'all':k); f.page=1; renderPanel(); }
+function pfPage(n){ pfState().page=n; renderPanel(); }
+function pfSize(n){ const f=pfState(); f.size=+n; f.page=1; renderPanel(); }
+
+function viewProj(){
+  const f=pfState(), rows=projFiltered();
+  const pages=Math.max(1, Math.ceil(rows.length/f.size));
+  f.page=Math.min(Math.max(1,f.page), pages);
+  const view=rows.slice((f.page-1)*f.size, f.page*f.size);
+
+  const pend=PROJ.filter(p=>p.st==='pending_review').length;
+  const run=PROJ.filter(p=>['scheduled','assigned','producing'].includes(p.st)).length;
+  const back=PROJ.filter(p=>p.st==='rejected').length;
+  const done=PROJ.filter(p=>{ const s=projStats(p); return s.n>0 && s.inbound===s.n; }).length;
+  const newThisMonth=PROJ.filter(p=>(p.created||'').slice(0,7)===TODAY.slice(0,7)).length;
+  const urgent=PROJ.filter(p=>p.st==='pending_review'&&p.level==='紧急').length;
+  const inMaking=DEV.filter(d=>!d.inbound && d.steps.some(s=>s.st==='doing'||s.st==='done')).length;
+  const inb=DEV.filter(d=>d.inbound).length;
+
+  const kpi=(k,cls,ic,label,n,sub)=>`<button class="kpi ${(f.kpi===k&&k!=='all')?'on':''}" onclick="pfKpi('${k}')">
+    <span class="ki ${cls}">${ic}</span>
+    <span class="kx"><span class="kl">${label}</span><span class="kv">${n}</span><span class="ks">${sub}</span></span></button>`;
+
+  const kpis=`<div class="kpis">
+    ${kpi('all','b',SVG('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>'),'全部项目',PROJ.length,`本月新增 ${newThisMonth} 项`)}
+    ${kpi('待审核','o',SVG('<path d="M7 2h10M7 22h10"/><path d="M17 2v4l-5 6 5 6v4H7v-4l5-6-5-6V2z"/>'),'待审核',pend,`含 ${urgent} 项紧急`)}
+    ${kpi('执行中','b',SVG('<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/>'),'执行中',run,`生产阶段 ${inMaking} 台在制`)}
+    ${kpi('已退回','r',SVG('<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>'),'已退回',back,'需重新修改')}
+    ${kpi('已完成','g',SVG('<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>'),'已完成',done,`已入库 ${inb} 台`)}
+  </div>`;
+
+  const stOpts=[...new Set(PROJ.map(p=>projStateLabel(p).t))];
+  const caret=SVG('<path d="M6 9l6 6 6-6"/>');
+  const filters=`
+  <div class="frow3">
+    <label class="fin"><span>项目名称</span><input id="fKw" placeholder="请输入项目名称" value="${esc(f.kw)}"></label>
+    <label class="fin"><span>项目编号</span><input id="fNo" placeholder="请输入项目编号" value="${esc(f.no)}"></label>
+    <label class="fin"><span>客户名称</span><input id="fCus" placeholder="请输入客户名称" value="${esc(f.cus)}"></label>
+  </div>
+  ${f.open?`<div class="frow2">
+    <label class="fin w2"><span>类型</span><select id="fType">
+      <option value="all">请选择类型</option>
+      ${['生产任务','信息任务','研发任务'].map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}
+    </select>${caret}</label>
+    <label class="fin w2"><span>当前状态</span><select id="fSt">
+      <option value="all">请选择状态</option>
+      ${stOpts.map(s=>`<option ${f.st===s?'selected':''}>${s}</option>`).join('')}
+    </select>${caret}</label>
+    <button class="btn pri" onclick="pfFind()">查找</button>
+    <button class="btn" onclick="pfReset()">重置</button>
+    <button class="collapse" onclick="pfToggle()">收起 ${SVG('<path d="M18 15l-6-6-6 6"/>')}</button>
+  </div>`:`<div class="frow2"><button class="collapse" onclick="pfToggle()">展开 ${caret}</button></div>`}`;
+
+  const trs=view.length?view.map(p=>{
+    const st=projStateLabel(p).t;
+    return `<tr>
+      <td class="no">${p.id}</td>
+      <td><span class="badge pri">${p.type}</span></td>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.cus)}</td>
+      <td class="num">${(p.amount/10000).toFixed(1)}W</td>
+      <td>${projLevelTag(p.level)}</td>
+      <td>${projTag(st)}</td>
+      <td>${esc(p.rep)}</td>
+      <td>${p.created}</td>
+      <td><button class="bt b" onclick="dwProjView('${p.id}')">查看</button><button class="bt o" onclick="dwProjEdit('${p.id}')">变更</button></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="10"><div class="empty">没有符合条件的项目</div></td></tr>`;
+
+  const nums=[]; for(let i=1;i<=pages;i++) nums.push(`<button class="pg ${i===f.page?'on':''}" onclick="pfPage(${i})">${i}</button>`);
+  const pager=`<div class="pager">
+    <span>共 ${rows.length} 条，每页</span>
+    <select onchange="pfSize(this.value)">${[10,20,50].map(n=>`<option value="${n}" ${f.size===n?'selected':''}>${n}</option>`).join('')}</select>
+    <span>条</span>
+    <button class="pg" ${f.page<=1?'disabled':''} onclick="pfPage(${f.page-1})">‹</button>
+    ${nums.join('')}
+    <button class="pg" ${f.page>=pages?'disabled':''} onclick="pfPage(${f.page+1})">›</button>
+    <span>跳至</span><input type="number" min="1" max="${pages}" value="${f.page}" onchange="pfPage(Math.min(${pages},Math.max(1,+this.value||1)))"><span>页</span>
+  </div>`;
+
+  return { lh:['项目管理','全部项目 · 按状态与产能推进'], list:'', panel:`${kpis}
+    <div class="pcard">
+      <div class="pcard-h"><h3>项目清单</h3><span class="sp"></span><button class="btn pri" onclick="dwNewProj()">+ 新建项目</button></div>
+      ${filters}
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr><th>项目编号</th><th>类型</th><th>项目名称</th><th>客户名称</th><th>合同金额</th><th>项目等级</th><th>当前状态</th><th>销售代表</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody>${trs}</tbody>
+      </table></div>
+      ${pager}
+    </div>` };
+}
+
+/* ---------- 右侧抽屉 ---------- */
+const MODEL_TXT = { 'KDC-12':'KDC-12 高压开关柜', 'KDC-08':'KDC-08 低压配电柜', 'KDC-05':'KDC-05 控制柜' };
+function dwOpen(title, body, foot, cls){
+  $('dwt').textContent=title; $('dwb').innerHTML=body; $('dwf').innerHTML=foot||'';
+  $('dw').classList.toggle('w2', cls==='w2');
+  $('dwm').classList.add('on'); $('dw').classList.add('on');
+}
+function dwClose(){ $('dwm').classList.remove('on'); $('dw').classList.remove('on'); }
+
+function dwProjView(id){
+  const p=proj(id); if(!p) return;
+  const st=projStateLabel(p), s=projStats(p);
+  const late=p.due<TODAY && s.inbound<s.n;
+  const devs=devOf(id).map(d=>{
+    const ds=devState(d);
+    return `<div class="pick" style="margin-bottom:7px;cursor:default">
+      <div class="m"><div class="t">${d.sn}</div>
+        <div class="s">出厂 ${d.seq}${d.planStart?' · '+d.planStart+' ~ '+d.planEnd:' · 未排产'}${d.inbound?' · 入库 '+d.inbound:''}</div>
+        ${stepbar(d)}</div>
+      <div class="r">${badge(ds.t,ds.c)}<div style="margin-top:6px;font-size:12px;color:var(--tx3)">${devPct(d)}%</div></div>
+    </div>`;
+  }).join('');
+  dwOpen(`项目详情 · ${p.id}`, `
+    ${kv('项目名称',esc(p.name))}
+    ${kv('客户',esc(p.cus))}
+    ${kv('产品 / 台数',esc(p.product)+' ×'+p.qty+' 台')}
+    ${kv('工艺路线',esc(CRAFT[p.craft].name))}
+    ${kv('生产车间',esc(p.ws))}
+    ${kv('合同交期','<b>'+p.due+'</b>'+(late?' '+badge('已超期','err'):''))}
+    ${kv('合同金额',(p.amount/10000).toFixed(1)+' 万元')}
+    ${kv('项目等级',projLevelTag(p.level))}
+    ${kv('销售代表',esc(p.rep))}
+    ${kv('创建时间',p.created)}
+    ${kv('当前状态',projTag(st.t))}
+    <div class="sec-t" style="margin-top:14px">设备进度 <span class="sp">已入库 ${s.inbound} / ${s.n} 台 · 整体 ${s.pct}%</span></div>
+    ${devs}
+  `, `<button class="btn" onclick="dwClose()">关闭</button>
+      <button class="btn pri" onclick="dwClose();go('track','${p.id}')">生产跟踪 →</button>`);
+}
+
+function dwProjEdit(id){
+  const p=proj(id); if(!p) return;
+  dwOpen(`项目变更 · ${p.id}`, `
+    <div class="note">变更会同步给技术、生产与销售三方；交期变化后需要重新核对排产窗口。</div>
+    <div class="frm"><div class="fld"><label>项目名称</label><input value="${esc(p.name)}" readonly></div></div>
+    <div class="frm">
+      <div class="fld"><label>合同交期</label><input type="date" id="eDue" value="${p.due}"></div>
+      <div class="fld"><label>项目等级</label><select id="eLevel">${['普通','紧急'].map(l=>`<option ${p.level===l?'selected':''}>${l}</option>`).join('')}</select></div>
+    </div>
+    <div class="frm"><div class="fld"><label>变更原因</label><textarea id="eNote" rows="3" placeholder="例如：客户现场安装窗口推迟"></textarea></div></div>
+  `, `<button class="btn" onclick="dwClose()">取消</button>
+      <button class="btn pri" onclick="dwSaveProj('${p.id}')">提交变更</button>`);
+}
+function dwSaveProj(id){
+  const p=proj(id); if(!p) return;
+  const due=val('eDue'), lv=val('eLevel'), note=(val('eNote')||'').trim();
+  if(!due){ toast('请选择合同交期','err'); return; }
+  if(!note){ toast('请填写变更原因','err'); return; }
+  p.due=due; p.level=lv;
+  dwClose(); toast(`${p.id} 变更已提交：交期 ${due} · ${lv}`,'ok'); renderPanel();
+}
+
+function dwNewProj(){
+  dwOpen('新建项目', `
+    <div class="note">提交后进入「项目立项审核」，由生产主任核对产能后决定是否接单。</div>
+    <div class="frm"><div class="fld"><label>项目名称 *</label><input id="nName" placeholder="例如：江苏南通化工园区低压配电改造"></div></div>
+    <div class="frm">
+      <div class="fld"><label>客户名称 *</label><input id="nCus" placeholder="请输入客户名称"></div>
+      <div class="fld"><label>销售代表</label><input id="nRep" value="李伟"></div>
+    </div>
+    <div class="frm">
+      <div class="fld"><label>产品型号</label><select id="nModel">
+        <option value="KDC-12">KDC-12 高压开关柜</option><option value="KDC-08">KDC-08 低压配电柜</option><option value="KDC-05">KDC-05 控制柜</option>
+      </select></div>
+      <div class="fld"><label>台数 *</label><input id="nQty" type="number" min="1" value="6"></div>
+    </div>
+    <div class="frm">
+      <div class="fld"><label>希望开工</label><input id="nStart" type="date" value="${addD(TODAY,10)}"></div>
+      <div class="fld"><label>希望交付</label><input id="nEnd" type="date" value="${addD(TODAY,40)}"></div>
+    </div>
+    <div class="frm"><div class="fld"><label>客户诉求</label><textarea id="nNote" rows="3" placeholder="交期、现场安装窗口等特殊要求"></textarea></div></div>
+  `, `<button class="btn" onclick="dwClose()">取消</button>
+      <button class="btn pri" onclick="dwCreateProj()">提交立项</button>`);
+}
+function dwCreateProj(){
+  const name=(val('nName')||'').trim(), cus=(val('nCus')||'').trim(), qty=parseInt(val('nQty')||0,10);
+  if(!name){ toast('请填写项目名称','err'); return; }
+  if(!cus){ toast('请填写客户名称','err'); return; }
+  if(!qty||qty<1){ toast('请填写台数','err'); return; }
+  const model=val('nModel'), id=nextNo('LX');
+  LIXIANG.push({ id, name, cus, product:MODEL_TXT[model]||model, model, qty,
+    wantStart:val('nStart'), wantEnd:val('nEnd'), sales:(val('nRep')||'—')+'（销售部）',
+    at:TODAY+' 09:30', note:val('nNote'), st:'pending' });
+  dwClose(); toast(`已提交立项申请 ${id}，等待生产主任核产能`,'ok'); renderPanel();
+}
+
+/* ---------- 任务书审核 ---------- */
+function viewAudit(){
+  const list=PROJ.map(p=>{ const st=projStateLabel(p);
+    return litem(`pick('${p.id}')`,esc(p.name),`${p.id} · ${p.st==='pending_review'?'待审核':(p.st==='rejected'?'已退回':'已通过')}`,badge(st.t,st.c),S.cur===p.id?'on':'');}).join('');
+  if(!S.cur||!proj(S.cur)) return { lh:['任务书审核','技术部下发的任务书'], list, panel:'<div class="empty">选择左侧项目开始审核</div>' };
+  const p=proj(S.cur), seen=S.checks[p.id]||{};
+  const n=Object.values(seen).filter(Boolean).length;
+  const can=p.st==='pending_review';
+  const panel=`<div class="ph"><div class="crumb">任务书审核</div><h2>${esc(p.name)}</h2><p>${p.id} · ${esc(p.cus)}</p></div>
+    ${projHead(p)}
+    <div class="card"><h4>技术部输出文件 <span class="sp">已核对 ${n}/${TECH_DOCS.length} 份</span></h4>
+      ${TECH_DOCS.map((d,i)=>`<div class="pick ${seen[i]?'on':''}" ${can?`onclick="chk('${p.id}',${i})"`:''}>
+        <div class="box">${seen[i]?'✓':''}</div>
+        <div class="m"><div class="t">${d.t}</div><div class="s">${d.n} · ${d.page}</div></div>
+        <div class="r">${seen[i]?'已核对':'待核对'}</div></div>`).join('')}
+    </div>
+    ${can?`<div class="bar-btm">
+      <span class="muted" style="font-size:12.5px">${n===TECH_DOCS.length?'已全部核对，可以给出结论':'请逐份核对后再给结论'}</span>
+      <span style="display:flex;gap:8px">
+        <button class="btn err" onclick="doAudit('${p.id}',0)">退回技术部</button>
+        <button class="btn ok" ${n===TECH_DOCS.length?'':'disabled'} onclick="doAudit('${p.id}',1)">审核通过 → 转排产</button>
+      </span></div>`
+    :`<div class="note ${p.st==='rejected'?'err':'ok'}">该任务书${p.st==='rejected'?'已退回技术部':'已审核通过'}，无需重复审核。</div>`}`;
+  return { lh:['任务书审核',`待审 ${counts().pendAudit} 个`], list, panel };
+}
+
+/* ---------- 项目立项审核 ---------- */
+function viewProjAudit(){
+  const list=LIXIANG.map(x=>litem(`pick('${x.id}')`,esc(x.name),
+    `${x.id} · ${esc(x.product)} ×${x.qty} 台 · 希望 ${x.wantEnd} 前交付`,
+    badge(x.st==='pending'?'待审核':x.st==='passed'?'已通过':'已驳回',x.st==='pending'?'err':x.st==='passed'?'ok':''),
+    S.cur===x.id?'on':'')).join('')||'<div class="empty">没有立项申请</div>';
+  const r=LIXIANG.find(x=>x.id===S.cur);
+  if(!r) return { lh:['项目立项审核',`待审 ${counts().pendProj} 个`], list,
+    panel:'<div class="empty">选择左侧立项申请，核产能后决定接不接</div>' };
+  const wStart=addD(r.wantStart,-14), wEnd=addD(r.wantEnd,14);
+  const weeks=weekLoad(wStart,wEnd);
+  const peak=Math.max(...weeks.map(w=>w.peak),0);
+  const busiest=weeks.slice().sort((a,b)=>b.peak-a.peak)[0]||{};
+  const busy=peak>=24;
+  const projs=[...new Set(weeks.flatMap(w=>w.projs))];
+  const maxP=Math.max(peak,1);
+  const done=r.st!=='pending';
+  const body=`<div class="ph"><div class="crumb">项目立项审核 · ${r.id}</div><h2>${esc(r.name)}</h2>
+    <p>${esc(r.cus)} · ${esc(r.product)} ×${r.qty} 台 · ${esc(r.sales)}</p></div>
+  ${hbar([['申请台数',r.qty+' 台'],['希望开工',r.wantStart],['希望交付',r.wantEnd],
+    ['窗口峰值',peak+' 台'],['产能结论',busy?'紧张':'可承接']])}
+  <div class="card"><h4>申请信息</h4>
+    ${kv('项目名称',esc(r.name))}${kv('客户',esc(r.cus))}
+    ${kv('产品 / 台数',esc(r.product)+' ×'+r.qty+' 台')}
+    ${kv('希望时间','<b>'+r.wantStart+' ~ '+r.wantEnd+'</b>')}
+    ${kv('提交人',esc(r.sales)+' · '+r.at)}
+    ${kv('客户诉求',esc(r.note)||'—')}
+  </div>
+  <div class="card"><h4>产能评估 <span class="sp">该项目时间窗前后各两周的排产占用（每周取峰值）</span></h4>
+    <div class="frm" style="margin-bottom:6px">
+      <div class="fld"><label>评估窗口</label><input value="${wStart} ~ ${wEnd}" readonly></div>
+      <div class="fld"><label>窗口内其他项目</label><input value="${projs.length} 个${projs.length?'（'+projs.map(id=>proj(id)?proj(id).name:id).join('、')+'）':''}" readonly></div>
+    </div>
+    ${weeks.map(w=>`<div class="kv"><div class="k">${w.from.slice(5)} ~ ${w.to.slice(5)}</div>
+      <div class="v">${loadBar(w.peak,maxP,w.peak>=24?'do':'')} ${w.peak} 台在排产
+      <span style="color:var(--tx3);font-size:11.5px"> · 日均 ${w.avg} 台${w.projs.length?' · '+w.projs.map(id=>proj(id)?proj(id).name:'—').join('、'):''}</span></div></div>`).join('')}
+    <div class="note ${busy?'warn':'ok'}" style="margin-top:10px">${busy
+      ? `产能偏紧：${busiest.from} ~ ${busiest.to} 这一周车间已有 <b>${peak}</b> 台柜子在排产，再接 ${r.qty} 台会挤在一起。建议与销售重议交期，或让客户接受分批交货。`
+      : `产能可承接：窗口内车间峰值 ${peak} 台在排产，接这 ${r.qty} 台不会与现有计划冲突。`}</div>
+  </div>
+  <div class="card"><h4>审核结论</h4>
+    ${done?kv('审核结果',(r.st==='passed'?badge('通过立项','ok'):badge('驳回','err'))+(r.pid?' · 已生成生产项目 '+r.pid:'')+(r.reason?' · 原因：'+esc(r.reason):''))
+      :`<div class="fld"><label>审核意见（驳回时必填）</label><input id="paNote" placeholder="例如：产能不足，建议交期后延一周"></div>`}
+  </div>
+  ${done?`<div class="note ${r.st==='passed'?'ok':'err'}">该立项申请已处理${r.st==='passed'?'，项目已进入正式项目列表（等任务书审核 → 排产）':'，已退回销售部'}。</div>`
+   :`<div class="bar-btm">
+      <span style="font-size:12.5px;color:var(--tx2)">通过后会生成正式项目与 ${r.qty} 台设备，并进入「任务书审核 → 排产」流程</span>
+      <span style="display:flex;gap:8px">
+        <button class="btn err" onclick="doProjAudit('${r.id}',0)">驳回</button>
+        <button class="btn ok" onclick="doProjAudit('${r.id}',1)">通过立项</button>
+      </span></div>`}`;
+  return { lh:['项目立项审核',`待审 ${counts().pendProj} 个`], list, panel:body };
+}
+
+/* ---------- 工序库（主数据） ---------- */
+const PRF={kw:'',grp:'all',st:'all',page:1,size:10};
+let DWG=null;                                   // 工序编辑缓冲区（抽屉内）
+
+function procRows(){
+  const kw=PRF.kw.toLowerCase();
+  return PROC_LIST.map(id=>PROC[id]).filter(p=>!!p).filter(p=>{
+    if(kw && !(p.name.toLowerCase().includes(kw)||p.id.toLowerCase().includes(kw))) return false;
+    if(PRF.grp!=='all' && !procGroups(p.id).includes(PRF.grp)) return false;
+    if(PRF.st==='on' && p.off) return false;
+    if(PRF.st==='off' && !p.off) return false;
+    return true;
+  });
+}
+function prfFind(){
+  PRF.kw=(val('pfKw')||'').trim(); PRF.grp=val('pfGrp')||'all'; PRF.st=val('pfSt')||'all';
+  PRF.page=1; render();
+}
+function prfReset(){ PRF.kw=''; PRF.grp='all'; PRF.st='all'; PRF.page=1; render(); }
+function prfPage(n){ PRF.page=n; render(); }
+
+function viewProc(){
+  const rows=procRows();
+  const pages=Math.max(1,Math.ceil(rows.length/PRF.size));
+  PRF.page=Math.min(Math.max(1,PRF.page),pages);
+  const view=rows.slice((PRF.page-1)*PRF.size, PRF.page*PRF.size);
+  const onN=PROC_LIST.filter(id=>PROC[id]&&!PROC[id].off).length;
+  const mainN=PROC_LIST.filter(id=>PROC[id]&&!PROC[id].ind).length;
+  const indN=PROC_LIST.filter(id=>PROC[id]&&PROC[id].ind).length;
+  const caret=SVG('<path d="M6 9l6 6 6-6"/>');
+  const filters=`
+  <div class="frow3">
+    <label class="fin"><span>工序名称</span><input id="pfKw" placeholder="请输入工序名称或编码" value="${esc(PRF.kw)}" onkeydown="if(event.key==='Enter')prfFind()"></label>
+    <label class="fin"><span>可承接班组</span><select id="pfGrp"><option value="all">全部班组</option>
+      ${GROUPS.map(g=>`<option value="${g.id}" ${PRF.grp===g.id?'selected':''}>${g.name}</option>`).join('')}</select>${caret}</label>
+    <label class="fin"><span>状态</span><select id="pfSt">
+      <option value="all">全部状态</option>
+      <option value="on" ${PRF.st==='on'?'selected':''}>启用中</option>
+      <option value="off" ${PRF.st==='off'?'selected':''}>已停用</option></select>${caret}</label>
+  </div>
+  <div class="pfbar">
+    <button class="btn pri" onclick="prfFind()">查询</button>
+    <button class="btn" onclick="prfReset()">重置</button>
+  </div>`;
+  const trs=view.length?view.map(p=>{
+    const gs=procGroups(p.id);
+    const used=procUsedIn(p.id);
+    return `<tr>
+      <td class="no">${p.id}</td>
+      <td><span class="lk" onclick="dwProcView('${p.id}')">${esc(p.name)}</span></td>
+      <td>${p.ind?'<span class="tag ind">前置独立</span>':'<span class="tag main">主链工序</span>'}</td>
+      <td class="num">${p.days||1} 天</td>
+      <td>${gs.map(g=>grp(g).name).join('、')||'<span class="muted">未指定</span>'}</td>
+      <td class="num">${money(p.price||0)}</td>
+      <td>${used.length?`${used.length} 条`:'<span class="muted">未引用</span>'}</td>
+      <td>${p.off?badge('已停用',''):badge('启用中','ok')}</td>
+      <td><button class="bt b" onclick="dwProcView('${p.id}')">查看</button><button class="bt o" onclick="dwProcEdit('${p.id}')">编辑</button></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="9"><div class="empty">没有符合条件的工序</div></td></tr>`;
+  const nums=[]; for(let i=1;i<=pages;i++) nums.push(`<button class="pg ${i===PRF.page?'on':''}" onclick="prfPage(${i})">${i}</button>`);
+  const pager=`<div class="pager">
+    <span>共 ${rows.length} 条，每页</span>
+    <select onchange="PRF.size=+this.value;PRF.page=1;render()">${[10,20,50].map(n=>`<option value="${n}" ${PRF.size===n?'selected':''}>${n}</option>`).join('')}</select>
+    <span>条</span>
+    <button class="pg" ${PRF.page<=1?'disabled':''} onclick="prfPage(${PRF.page-1})">‹</button>
+    ${nums.join('')}
+    <button class="pg" ${PRF.page>=pages?'disabled':''} onclick="prfPage(${PRF.page+1})">›</button>
+    <span>跳至</span><input type="number" min="1" max="${pages}" value="${PRF.page}" onchange="prfPage(Math.min(${pages},Math.max(1,+this.value||1)))"><span>页</span>
+  </div>`;
+  const headNotes=`共 ${PROC_LIST.length} 道 · 启用 ${onN} · 停用 ${PROC_LIST.length-onN} · 主链 ${mainN} / 前置 ${indN}`;
+  return { lh:['工序库','主数据 · 工序名称 / 周期 / 班组 / 状态'], list:'', panel:`
+    <div class="pcard">
+      <div class="pcard-h"><h3>工序清单</h3><span class="sub">${headNotes}</span>
+        <span class="sp"></span>
+        <button class="btn pri" onclick="dwProcNew()">+ 新建工序</button></div>
+      ${filters}
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr><th>工序编码</th><th>工序名称</th><th>工序类型</th><th>标准周期</th><th>可承接班组</th><th>计件单价</th><th>引用工艺</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>${trs}</tbody>
+      </table></div>
+      ${pager}
+    </div>` };
+}
+/* ---------- 工艺路线（主数据） ---------- */
+const CRF={kw:'',model:'all',st:'all',page:1,size:10};
+let DWC=null;                                   // 工艺编辑缓冲区（抽屉内）
+
+function craftSeq(c){ return [].concat(c.ind||[], c.procs||[]); }
+function craftCyc(c){ return craftSeq(c).reduce((a,pid)=>a+((PROC[pid]&&PROC[pid].days)||1),0); }
+function craftCost(c){ return craftSeq(c).reduce((a,pid)=>a+((PROC[pid]&&PROC[pid].price)||0),0); }
+function craftUsedBy(cid){ return PROJ.filter(p=>p.craft===cid); }
+function craftModels(){ return [...new Set(CRAFT_LIST.map(id=>CRAFT[id]).filter(c=>c&&c.model).map(c=>c.model))]; }
+
+function craftRows(){
+  const kw=CRF.kw.toLowerCase();
+  return CRAFT_LIST.map(id=>CRAFT[id]).filter(c=>!!c).filter(c=>{
+    if(kw && !((c.name||'').toLowerCase().includes(kw)||c.id.toLowerCase().includes(kw))) return false;
+    if(CRF.model!=='all' && (c.model||'')!==CRF.model) return false;
+    if(CRF.st==='on' && c.off) return false;
+    if(CRF.st==='off' && !c.off) return false;
+    return true;
+  });
+}
+function crfFind(){
+  CRF.kw=(val('cfKw')||'').trim(); CRF.model=val('cfModel')||'all'; CRF.st=val('cfSt')||'all';
+  CRF.page=1; render();
+}
+function crfReset(){ CRF.kw=''; CRF.model='all'; CRF.st='all'; CRF.page=1; render(); }
+function crfPage(n){ CRF.page=n; render(); }
+
+function viewCraft(){
+  const rows=craftRows();
+  const pages=Math.max(1,Math.ceil(rows.length/CRF.size));
+  CRF.page=Math.min(Math.max(1,CRF.page),pages);
+  const view=rows.slice((CRF.page-1)*CRF.size, CRF.page*CRF.size);
+  const onN=CRAFT_LIST.filter(id=>CRAFT[id]&&!CRAFT[id].off).length;
+  const caret=SVG('<path d="M6 9l6 6 6-6"/>');
+  const filters=`
+  <div class="frow3">
+    <label class="fin"><span>工艺名称</span><input id="cfKw" placeholder="请输入工艺名称或编码" value="${esc(CRF.kw)}" onkeydown="if(event.key==='Enter')crfFind()"></label>
+    <label class="fin"><span>适用产品</span><select id="cfModel"><option value="all">全部产品</option>
+      ${craftModels().map(m=>`<option value="${esc(m)}" ${CRF.model===m?'selected':''}>${esc(m)}</option>`).join('')}</select>${caret}</label>
+    <label class="fin"><span>状态</span><select id="cfSt">
+      <option value="all">全部状态</option>
+      <option value="on" ${CRF.st==='on'?'selected':''}>启用中</option>
+      <option value="off" ${CRF.st==='off'?'selected':''}>已停用</option></select>${caret}</label>
+  </div>
+  <div class="pfbar">
+    <button class="btn pri" onclick="crfFind()">查询</button>
+    <button class="btn" onclick="crfReset()">重置</button>
+  </div>`;
+  const trs=view.length?view.map(c=>{
+    const main=(c.procs||[]).length, ind=(c.ind||[]).length, used=craftUsedBy(c.id);
+    return `<tr>
+      <td class="no">${c.id}</td>
+      <td><span class="lk" onclick="dwCraftView('${c.id}')">${esc(c.name)}</span></td>
+      <td>${esc(c.model||'通用')}</td>
+      <td>${main?`主链 ${main} 道${ind?` · 前置 ${ind} 道`:''}`:`仅前置 ${ind} 道`}</td>
+      <td class="num">${craftCyc(c)} 天</td>
+      <td class="num">${money(craftCost(c))}</td>
+      <td class="num">${used.length?used.length+' 个':'<span class="muted">未引用</span>'}</td>
+      <td>${c.off?badge('已停用',''):badge('启用中','ok')}</td>
+      <td><button class="bt b" onclick="dwCraftView('${c.id}')">查看</button><button class="bt o" onclick="dwCraftEdit('${c.id}')">编辑</button></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="9"><div class="empty">没有符合条件的工艺路线</div></td></tr>`;
+  const nums=[]; for(let i=1;i<=pages;i++) nums.push(`<button class="pg ${i===CRF.page?'on':''}" onclick="crfPage(${i})">${i}</button>`);
+  const pager=`<div class="pager">
+    <span>共 ${rows.length} 条，每页</span>
+    <select onchange="CRF.size=+this.value;CRF.page=1;render()">${[10,20,50].map(n=>`<option value="${n}" ${CRF.size===n?'selected':''}>${n}</option>`).join('')}</select>
+    <span>条</span>
+    <button class="pg" ${CRF.page<=1?'disabled':''} onclick="crfPage(${CRF.page-1})">‹</button>
+    ${nums.join('')}
+    <button class="pg" ${CRF.page>=pages?'disabled':''} onclick="crfPage(${CRF.page+1})">›</button>
+    <span>跳至</span><input type="number" min="1" max="${pages}" value="${CRF.page}" onchange="crfPage(Math.min(${pages},Math.max(1,+this.value||1)))"><span>页</span>
+  </div>`;
+  const headNotes=`共 ${CRAFT_LIST.length} 条 · 启用 ${onN} · 停用 ${CRAFT_LIST.length-onN}`;
+  return { lh:['工艺路线','主数据 · 工序链条 / 标准周期 / 单台计件'], list:'', panel:`
+    <div class="pcard">
+      <div class="pcard-h"><h3>工艺路线清单</h3><span class="sub">${headNotes}</span>
+        <span class="sp"></span>
+        <button class="btn pri" onclick="dwCraftNew()">+ 新建工艺路线</button></div>
+      ${filters}
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr><th>工艺编码</th><th>工艺名称</th><th>适用产品</th><th>工序构成</th><th>标准周期</th><th>单台计件</th><th>引用项目</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>${trs}</tbody>
+      </table></div>
+      ${pager}
+    </div>` };
+}
+/* ---------- 生产排产 ---------- */
+const PLF={kw:'',prog:'all',due:'all',page:1,size:10};
+let PLN=null;                                   // 排产抽屉缓冲
+
+function planRows(){
+  const kw=PLF.kw.toLowerCase();
+  return PROJ.filter(p=>['reviewed','scheduled','assigned','producing'].includes(p.st)).filter(p=>{
+    if(kw && !(p.name.toLowerCase().includes(kw)||p.id.toLowerCase().includes(kw)||(p.cus||'').toLowerCase().includes(kw))) return false;
+    const s=projStats(p);
+    if(PLF.prog==='none' && s.planned>0) return false;
+    if(PLF.prog==='part' && !(s.planned>0 && s.planned<s.n)) return false;
+    if(PLF.prog==='done' && !(s.n && s.planned===s.n)) return false;
+    if(PLF.due!=='all'){
+      const d=daysBetween(TODAY,p.due);
+      if(PLF.due==='late' && !(p.due<TODAY)) return false;
+      if(PLF.due==='7' && !(d>=0&&d<=7)) return false;
+      if(PLF.due==='30' && !(d>=0&&d<=30)) return false;
+    }
+    return true;
+  }).sort((a,b)=>String(a.due||'').localeCompare(String(b.due||'')));
+}
+function plfFind(){
+  PLF.kw=(val('plKw')||'').trim(); PLF.prog=val('plProg')||'all'; PLF.due=val('plDue')||'all';
+  PLF.page=1; render();
+}
+function plfReset(){ PLF.kw=''; PLF.prog='all'; PLF.due='all'; PLF.page=1; render(); }
+function plfPage(n){ PLF.page=n; render(); }
+
+function viewPlan(){
+  const rows=planRows();
+  const pages=Math.max(1,Math.ceil(rows.length/PLF.size));
+  PLF.page=Math.min(Math.max(1,PLF.page),pages);
+  const view=rows.slice((PLF.page-1)*PLF.size, PLF.page*PLF.size);
+  const all=PROJ.filter(p=>['reviewed','scheduled','assigned','producing'].includes(p.st));
+  const pendN=all.reduce((a,p)=>{ const s=projStats(p); return a+(s.n-s.planned); },0);
+  const lateN=all.filter(p=>p.due<TODAY && projStats(p).inbound<projStats(p).n).length;
+  const caret=SVG('<path d="M6 9l6 6 6-6"/>');
+  const filters=`
+  <div class="frow3">
+    <label class="fin"><span>项目</span><input id="plKw" placeholder="项目名称 / 编号 / 客户" value="${esc(PLF.kw)}" onkeydown="if(event.key==='Enter')plfFind()"></label>
+    <label class="fin"><span>排产进度</span><select id="plProg">
+      <option value="all">全部进度</option>
+      <option value="none" ${PLF.prog==='none'?'selected':''}>未排产</option>
+      <option value="part" ${PLF.prog==='part'?'selected':''}>部分排产</option>
+      <option value="done" ${PLF.prog==='done'?'selected':''}>已排完</option></select>${caret}</label>
+    <label class="fin"><span>合同交期</span><select id="plDue">
+      <option value="all">全部交期</option>
+      <option value="late" ${PLF.due==='late'?'selected':''}>已逾期</option>
+      <option value="7" ${PLF.due==='7'?'selected':''}>7 天内到期</option>
+      <option value="30" ${PLF.due==='30'?'selected':''}>30 天内到期</option></select>${caret}</label>
+  </div>
+  <div class="pfbar">
+    <button class="btn pri" onclick="plfFind()">查询</button>
+    <button class="btn" onclick="plfReset()">重置</button>
+  </div>`;
+  const trs=view.length?view.map(p=>{
+    const s=projStats(p), pend=s.n-s.planned, st=projStateLabel(p);
+    const late=p.due<TODAY && s.inbound<s.n;
+    return `<tr>
+      <td class="no">${p.id}</td>
+      <td><span class="lk" onclick="dwPlan('${p.id}')">${esc(p.name)}</span></td>
+      <td>${esc(p.cus||'—')}</td>
+      <td class="num">${s.n} 台</td>
+      <td class="num">${pend?`<b style="color:var(--warn)">${pend}</b> 台`:'<span class="muted">已排完</span>'}</td>
+      <td>${p.due||'—'}${late?' <span style="color:var(--err);font-size:11.5px">逾期</span>':''}</td>
+      <td>${badge(st.t,st.c)}</td>
+      <td><button class="bt b" onclick="dwPlan('${p.id}')">${pend?(s.planned?'继续排产':'排产'):'改期'}</button></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="8"><div class="empty">没有符合条件的项目</div></td></tr>`;
+  const nums=[]; for(let i=1;i<=pages;i++) nums.push(`<button class="pg ${i===PLF.page?'on':''}" onclick="plfPage(${i})">${i}</button>`);
+  const pager=`<div class="pager">
+    <span>共 ${rows.length} 条，每页</span>
+    <select onchange="PLF.size=+this.value;PLF.page=1;render()">${[10,20,50].map(n=>`<option value="${n}" ${PLF.size===n?'selected':''}>${n}</option>`).join('')}</select>
+    <span>条</span>
+    <button class="pg" ${PLF.page<=1?'disabled':''} onclick="plfPage(${PLF.page-1})">‹</button>
+    ${nums.join('')}
+    <button class="pg" ${PLF.page>=pages?'disabled':''} onclick="plfPage(${PLF.page+1})">›</button>
+    <span>跳至</span><input type="number" min="1" max="${pages}" value="${PLF.page}" onchange="plfPage(Math.min(${pages},Math.max(1,+this.value||1)))"><span>页</span>
+  </div>`;
+  const headNotes=`共 ${all.length} 个项目 · 待排 ${pendN} 台 · 逾期 ${lateN} 个`;
+  return { lh:['排产','按合同交期排序 · 选中项目后填时间窗与参与班组'], list:'', panel:`
+    <div class="pcard">
+      <div class="pcard-h"><h3>排产项目清单</h3><span class="sub">${headNotes}</span>
+        <span class="sp"></span>
+        <span style="font-size:12.5px;color:var(--tx3)">默认按合同交期从早到晚</span></div>
+      ${filters}
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr><th>项目编号</th><th>项目名称</th><th>客户</th><th>设备数</th><th>待排台数</th><th>合同交期</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>${trs}</tbody>
+      </table></div>
+      ${pager}
+    </div>` };
+}
+/* ---------- 工序派单 ---------- */
+function viewAssign(){
+  const rows=PROJ.filter(p=>devOf(p.id).some(d=>d.planStart&&d.steps.some(s=>!s.g)));
+  const list=rows.map(p=>{ const s=projStats(p), pend=devOf(p.id).filter(d=>d.steps.some(x=>!x.g)).length;
+    return litem(`pick('${p.id}')`,esc(p.name),`${p.id} · ${s.n} 台 · 已派单 ${s.assigned} 台`,`<b>${pend}</b> 待派`,S.cur===p.id?'on':'');}).join('')
+    ||'<div class="empty">没有待派单的项目</div>';
+  if(!S.cur||!proj(S.cur)) return { lh:['工序派单',`待派单 ${counts().pendAssign} 个项目`], list, panel:'<div class="empty">选择左侧项目，勾选设备与工序后派单</div>' };
+  const p=proj(S.cur), ds=devOf(p.id).filter(d=>d.planStart);
+  if(!S.sel.length) S.sel=ds.filter(d=>d.steps.some(x=>!x.g)).map(d=>d.sn);
+  const sel=ds.filter(d=>S.sel.includes(d.sn));
+  const procs=[...new Set(ds.flatMap(d=>d.steps.map(s=>s.p)))];
+  if(!S.procs) S.procs=procs.filter(pid=>sel.some(d=>d.steps.some(s=>s.p===pid&&!s.g)));
+  S.procGroup=S.procGroup||{};
+  const selSn=sel.map(d=>d.sn);
+  const leads=leadGroupsOf(selSn, p.craft);        // 排产时勾选的参与班组
+  S.procs.forEach(pid=>{ if(!S.procGroup[pid]){ const cg=candGroups(pid,selSn,p.craft); S.procGroup[pid]=cg.list[0]||procGroups(pid)[0]||GROUPS[0].id; } });
+  const gp=S.procGroup;
+  const body=`<div class="ph"><div class="crumb">工序派单 · ${esc(p.name)}</div><h2>把设备的工序交给班组</h2>
+    <p>先勾设备（可多选），再勾这批设备要派的工序，最后选承接班组</p></div>
+    ${hbar([['已排产设备',ds.length+' 台'],['本次勾选',sel.length+' 台'],['待派工序',S.procs.length+' 道'],['参与班组',leads.map(g=>grp(g).name).join('、')]])}
+    <div class="note">候选班组＝排产勾选的<b>参与班组</b>里会做这道工序的组：${leads.map(g=>grp(g).name).join('、')}${leads.some(g=>groupCanDo(g,'GX01')||groupCanDo(g,'GX02')||groupCanDo(g,'GX03')||groupCanDo(g,'GX04')||groupCanDo(g,'GX05'))?'':'（注意：这些组都做不了本工艺的工序）'}。<b>排产少勾一个组，那道工序就会没人接</b>，此时系统会退回"全部会做的组"并标出「跨组支援」。</div>
+    <div class="card"><h4>① 选择设备 <span class="sp">点条目勾选</span></h4>
+      ${ds.map(d=>devPick(d,S.sel.includes(d.sn))).join('')}
+      <div style="display:flex;gap:12px;margin-top:10px">
+        <span class="lnk" onclick="selAll(1)">全选</span>
+        <span class="lnk" onclick="selUndo2('${p.id}')">只选没派完的</span>
+        <span class="lnk" onclick="selAll(0)">清空</span></div></div>
+    <div class="card"><h4>② 选择工序 <span class="sp">按工艺路线 ${esc(CRAFT[p.craft].name)}</span></h4>
+      <div class="chips">${procs.map(pid=>{ const p2=PROC[pid];
+        return `<span class="chip ${S.procs.includes(pid)?'on':''}" onclick="toggleProc('${pid}')">${p2.ind?'◆ ':''}${p2.name}</span>`;}).join('')}</div></div>
+    <div class="card"><h4>③ 每道工序交给哪个班组 <span class="sp">计划时间默认取设备的排产窗口，可逐道改（铜排线默认前置 2 天）</span></h4>
+      ${S.procs.length?S.procs.map(pid=>{ const p2=PROC[pid], dr=asgRowDate(p,pid,selSn), cg=candGroups(pid,selSn,p.craft);
+        const opts=cg.list.length?cg.list:[procGroups(pid)[0]||GROUPS[0].id];
+        return `<div class="prow"><div class="av">${p2.name.slice(0,2)}</div>
+          <div class="m"><div class="t">${p2.ind?'◆ ':''}${p2.name}${p2.ind?' <span class="badge warn">独立 · 前置</span>':''}</div>
+            <div class="s">${sel.length} 台 · 计件 ${p2.price} 元/台${cg.conflict?` · <span style="color:var(--err)">参与班组里没有会做这道工序的组，已退回全部可选组</span>`:` · 候选 ${opts.map(g=>grp(g).name).join('、')}`}</div></div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <select class="btn sm" onchange="setProcGroup('${pid}',this.value)">
+              ${opts.map(gid=>`<option value="${gid}" ${gid===gp[pid]?'selected':''}>${grp(gid).name} · ${emp(grp(gid).leader).name}${groupCanDo(gid,pid)?'':' · 跨组支援'}</option>`).join('')}</select>
+            <input type="date" class="btn sm" value="${dr.s}" onchange="setProcDate('${pid}','s',this.value)">
+            <span style="color:var(--tx3)">~</span>
+            <input type="date" class="btn sm" value="${dr.e}" onchange="setProcDate('${pid}','e',this.value)">
+          </div></div>`;}).join('')
+        :'<div class="empty">请先勾选工序</div>'}
+    </div>
+    <div class="bar-btm">
+      <span>已选 <b>${sel.length}</b> 台设备 · <b>${S.procs.length}</b> 道工序</span>
+      <button class="btn pri" ${(sel.length&&S.procs.length)?'':'disabled'} onclick="doAssign('${p.id}')">确认派单</button>
+    </div>`;
+  return { lh:['工序派单',`待派单 ${counts().pendAssign} 个项目`], list, panel:body };
+}
+
+/* ---------- 生产跟踪 ---------- */
+function viewTrack(){
+  const rows=PROJ.filter(p=>p.st!=='pending_review');
+  const list=rows.map(p=>{ const s=projStats(p);
+    return litem(`pick('${p.id}')`,esc(p.name),`${p.id} · ${s.n} 台 · 完工 ${s.done} 台`,`<b>${s.pct}%</b>`,S.cur===p.id?'on':'');}).join('');
+  if(!S.cur||!proj(S.cur)) return { lh:['生产跟踪','按项目看每台设备的进度'], list, panel:'<div class="empty">选择左侧项目</div>' };
+  const p=proj(S.cur), s=projStats(p), ds=devOf(p.id);
+  const body=`<div class="ph"><div class="crumb">生产跟踪 · ${esc(p.name)}</div><h2>每台设备走到哪道工序</h2>
+    <p>共 ${s.n} 台设备，一条一台；点设备看这台柜的工序与负责人</p></div>
+    ${hbar([['设备',s.n+' 台'],['已派单',s.assigned+' 台'],['已派工',s.worked+' 台'],['已完工',s.done+' 台'],['已入库',s.inbound+' 台'],['整体进度',s.pct+'%']])}
+    ${s.n?`<div class="stats" style="margin-bottom:12px">${['未开工','在制','已完工'].map((t,i)=>{
+      const n=ds.filter(d=>{ const st=devState(d).t; return i===0?(st==='待排产'||st==='待派单'||st==='待派工'||st==='待开工'):i===1?st==='在制':(st==='已完工'||st==='已入库'); }).length;
+      return stat(t,n+' 台');}).join('')}</div>`:''}
+    ${ds.map(d=>{ const st=devState(d), cur=devCurStep(d);
+      return `<div class="card" style="margin-bottom:8px">
+        <div style="display:flex;gap:12px;align-items:center">
+          ${ring(devPct(d))}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:600">${d.sn} ${badge(st.t,st.c)}</div>
+            <div style="font-size:12px;color:var(--tx2);margin-top:2px">
+              ${d.planStart?'排产 '+d.planStart+' ~ '+d.planEnd:'未排产'}${(d.gids||[]).length?' · 参与班组 '+d.gids.map(g=>grp(g).name).join('、'):''}${d.inbound?' · 入库 '+d.inbound:''}</div>
+            <div style="font-size:12px;color:var(--tx2);margin-top:2px">
+              当前：${cur?esc(PROC[cur.p].name)+(cur.g?' · '+grp(cur.g).name:'')+' · '+(cur.e?emp(cur.e).name+((cur.es&&cur.es.length>1)?' 等 '+cur.es.length+' 人':''):'未派工'):'全部工序已完工'}</div>
+            ${stepbar(d)}
+          </div>
+        </div>
+        <div style="margin-top:8px">${stepChips(d)}</div>
+        ${d.planStart?`<div style="margin-top:6px;font-size:11.5px;color:var(--tx3)">工序计划：${d.steps.filter(x=>x.ps).map(x=>`${PROC[x.p].name} ${x.ps.slice(5)}~${x.pe.slice(5)}`).join(' · ')||'—'}</div>`:''}
+      </div>`;}).join('')}`;
+  return { lh:['生产跟踪',`${rows.length} 个在制项目`], list, panel:body };
+}
+
+/* ---------- 计件结算 ---------- */
+function viewPay(){
+  const list=GROUPS.map(g=>{
+    const rows=payRows().filter(r=>r.g===g.id);
+    return litem(`pick('${g.id}')`,g.name,`${emp(g.leader).name} · ${rows.length} 个工序任务`,`<b>${money(rows.reduce((a,r)=>a+r.amt,0))}</b>`,S.cur===g.id?'on':'');}).join('');
+  if(!S.cur||!GROUPS.some(g=>g.id===S.cur)) return { lh:['计件结算','按班组核算 · 无工时'], list, panel:'<div class="empty">选择左侧班组</div>' };
+  const g=grp(S.cur), rows=payRows().filter(r=>r.g===S.cur);
+  const total=rows.reduce((a,r)=>a+r.amt,0), qty=rows.reduce((a,r)=>a+r.qty,0);
+  const body=`<div class="ph"><div class="crumb">计件结算 · ${g.name}</div><h2>班组计件（公司核算口径）</h2>
+    <p>计件 = 工序单价 × 完工台数 × 质量系数；公司只核算到班组，组内由组长自主分配</p></div>
+    ${hbar([['工序任务',rows.length+' 项'],['完工台数',qty+' 台'],['计件金额',money(total)],['质量系数','1.00']])}
+    ${rows.length?rows.map(r=>`<div class="card" style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="m" style="flex:1;min-width:0">
+          <div style="font-size:13.5px;font-weight:500">${PROC[r.p].name} · ${esc(r.proj)}</div>
+          <div style="font-size:12px;color:var(--tx2);margin-top:2px">${r.qty} 台 × ${money(PROC[r.p].price)} × ${r.coef}</div>
+        </div>
+        <div style="font-size:15px;font-weight:600">${money(r.amt)}</div>
+      </div></div>`).join(''):'<div class="empty">该班组本月还没有完工工序</div>'}
+    <div class="note ok">个人金额仅作参考：公司按班组结算，组内怎么分由组长定。</div>`;
+  return { lh:['计件结算','按班组 · 纯计件'], list, panel:body };
+}
+/* 计件明细：按 班组 × 项目 × 工序 汇总已完工台数 */
+function payRows(){
+  const out={};
+  DEV.forEach(d=>d.steps.forEach(s=>{ if(s.st!=='done'||!s.g) return;
+    const k=s.g+'|'+d.proj+'|'+s.p;
+    out[k]=out[k]||{ g:s.g, proj:proj(d.proj).name, p:s.p, qty:0, coef:1.0 };
+    out[k].qty+=1; }));
+  return Object.values(out).map(r=>({ ...r, amt:r.qty*PROC[r.p].price*r.coef }));
+}
+/* ============================ 9. 组长端页面 ============================ */
+const G = () => S.role==='leader' ? S.gid : 'G1';
+function groupProjects(){
+  const gid=G();
+  return PROJ.filter(p=>devOf(p.id).some(d=>d.steps.some(s=>s.g===gid&&!s.e)));
+}
+function groupDevs(p,gid){ return devOf(p.id).filter(d=>d.steps.some(s=>s.g===gid&&!s.e)); }
+function empOfGroup(gid){ return EMP.filter(e=>e.g===gid); }
+
+/* ---------- 班组派工 ---------- */
+function viewWork(){
+  const gid=G(), ps=groupProjects();
+  const list=ps.map(p=>{ const n=groupDevs(p,gid).length;
+    return litem(`pick('${p.id}')`,esc(p.name),`${p.id} · 待派工 ${n} 台`,`<b>${n}</b> 台`,S.cur===p.id?'on':'');}).join('')
+    ||'<div class="empty">本组现在没有待派工的设备</div>';
+  if(!S.cur||!proj(S.cur)) return { lh:['班组派工',`${grp(gid).name} · 待派 ${ps.reduce((a,p)=>a+groupDevs(p,gid).length,0)} 台`], list, panel:'<div class="empty">选择左侧项目</div>' };
+  const p=proj(S.cur);
+  if(S.sub==='wiz'&&S.wiz) return { lh:['班组派工','选人 · 分配物料'], list, panel:wizPanel(p) };
+  const ds=groupDevs(p,gid);
+  if(!S.sel.length) S.sel=ds.map(d=>d.sn);
+  const sel=ds.filter(d=>S.sel.includes(d.sn));
+  const body=`<div class="ph"><div class="crumb">班组派工 · ${esc(p.name)}</div><h2>本组待派工的设备</h2>
+    <p>勾选要派的设备（可多选），点下方按钮进入派工：选人 → 分配物料 → 定时间</p></div>
+    ${hbar([['本组待派工',ds.length+' 台'],['本次勾选',sel.length+' 台'],['本组人数',empOfGroup(gid).length+' 人']])}
+    <div class="card"><h4>设备 <span class="sp">点条目勾选</span></h4>
+      ${ds.map(d=>{ const st=d.steps.filter(s=>s.g===gid&&!s.e).map(s=>PROC[s.p].name).join('、');
+        return devPick(d,S.sel.includes(d.sn),`<div style="font-size:11.5px">${esc(st)}</div>`);}).join('')}
+      <div style="display:flex;gap:12px;margin-top:10px">
+        <span class="lnk" onclick="selAll(1)">全选</span><span class="lnk" onclick="selAll(0)">清空</span></div></div>
+    <div class="bar-btm">
+      <span>已选 <b>${sel.length}</b> 台设备</span>
+      <button class="btn pri" ${sel.length?'':'disabled'} onclick="startWiz('${p.id}')">给这 ${sel.length} 台派工 →</button>
+    </div>`;
+  return { lh:['班组派工',`${grp(gid).name} · 待派 ${ps.reduce((a,x)=>a+groupDevs(x,gid).length,0)} 台`], list, panel:body };
+}
+/* 派工向导（右侧面板内完成，不用弹窗） */
+function wizPanel(p){
+  const w=S.wiz, gid=G(), emps=empOfGroup(gid);
+  const all=MAT[w.proc]||[], aux=all.filter(m=>m.aux);
+  const matAll=w.matList||batchMatList(w.devs);
+  const matMain=matAll.filter(m=>!m.aux);
+  const un=w.devs.filter(sn=>!(w.devEmp[sn]||[]).length).length;
+  const coop=w.devs.filter(sn=>(w.devEmp[sn]||[]).length>1).length;
+  const nOf=e=>w.devs.filter(sn=>(w.devEmp[sn]||[]).includes(e)).length;        // 参与台数
+  const leadN=e=>w.devs.filter(sn=>(w.devEmp[sn]||[])[0]===e).length;           // 主责台数（领料按这个）
+  return `<div class="ph"><div class="crumb">${esc(p.name)} · 派工</div><h2>${PROC[w.proc].ind?'◆ ':''}${PROC[w.proc].name} · ${w.devs.length} 台</h2>
+    <p>点名字增减参与人；点设备号把设备分给他 —— <b>同一台设备点两个人的名字，就是两人共同负责</b></p></div>
+  ${hbar([['设备',w.devs.length+' 台'],['参与',w.emps.length+' 人'],['待指定人',un+' 台'],['两人共同',coop+' 台'],['物料单',matMain.length+' 项']])}
+  <div class="card"><h4>① 做哪道工序</h4>
+    <div class="chips">${[...new Set(w.devs.flatMap(sn=>dev(sn).steps.filter(s=>s.g===gid&&!s.e).map(s=>s.p)))].map(pid=>
+      `<span class="chip ${w.proc===pid?'on':''}" onclick="wizProc('${pid}')">${PROC[pid].ind?'◆ ':''}${PROC[pid].name}</span>`).join('')}</div></div>
+  <div class="card"><h4>② 分给谁 <span class="sp">点名字增减参与人 · 点设备号分配（同一台可点多人 = 共同负责）</span></h4>
+    ${emps.map(e=>{ const on=w.emps.includes(e.id), all=nOf(e.id), lead=leadN(e.id);
+      return `<div class="prow ${on?'on':''}" ${on?'':`onclick="wizEmp('${e.id}',1)"`}>
+        <div class="av">${initials(e.name)}</div>
+        <div class="m"><div class="t">${e.name}${e.leader?' · 组长':''}</div>
+          <div class="s">${e.level} · ${on?('共 '+all+' 台'+(lead<all?`（主责 ${lead} 台 · 协作 ${all-lead} 台）`:'')):'未参与'}</div>
+          ${on?`<div class="chips" style="margin-top:6px">${w.devs.map(sn=>{
+            const arr=w.devEmp[sn]||[], mine=arr.includes(e.id), others=arr.filter(x=>x!==e.id);
+            const tip=arr.length? arr.map(x=>emp(x).name).join(' + ')+' 共同负责' : '未指定人 · 点我把他分到这台';
+            return `<span class="chip ${mine?'on':(others.length?'co':'')}" title="${tip}" onclick="wizDev('${sn}','${e.id}')">${mine?'✓ ':''}${sn}${others.length?' +'+others.length:''}</span>`;}).join('')}</div>`:''}
+        </div>
+        ${on?`<button class="btn sm" onclick="wizEmp('${e.id}',0)">移除</button>`:''}
+      </div>`;}).join('')}
+    <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+      <span class="lnk" onclick="wizEmpAll(1)">全组参与</span><span class="lnk" onclick="wizEmpAll(0)">清空人员</span>
+      <span class="lnk" onclick="wizAvg()">按人头平均分</span>
+      <span class="lnk" onclick="wizPairAll()">两人一组共同负责</span></div>
+    <div class="note" style="margin-top:10px">绿色实框＝他做这台（✓）；虚线框＝别人也做这台（+1 表示还有 1 人共同负责）。一台设备最多 3 人共同负责，至少 1 人。</div></div>
+  <div class="card"><h4>③ 从设备物料单里选料、填件数 <span class="sp">清单＝这 ${w.devs.length} 台设备按其工序汇总出来的物料单</span></h4>
+    <div class="note">物料单共 <b>${matMain.length}</b> 项主材（本工序涉及 ${matMain.filter(m=>m.procs.includes(w.proc)).length} 项已默认勾选）；也可以勾上其它工序的料一并领。数量按<b>主责台数</b>算好，可直接改；取消勾选或填 0 = 不领。</div>
+    <div class="card" style="background:#fafbfc;margin-bottom:12px">
+      <h4>本批设备物料单（参考） <span class="sp">单台用量 × ${w.devs.length} 台 = 本批需求</span></h4>
+      ${w.matList.filter(m=>!m.aux).map(m=>`<div class="kv"><div class="k" style="width:170px">${esc(m.n)}</div>
+        <div class="v">${esc(m.sp||'—')} · 单台 <b>${m.per}${m.u}</b> · 本批需求 <b>${Math.ceil(m.per*w.devs.length)}${m.u}</b>
+        <span style="color:var(--tx3);font-size:11.5px"> · ${m.procs.map(p=>PROC[p].name).join('/')} · ${m.wh}</span></div></div>`).join('')||'<div class="empty">这批设备没有主材</div>'}
+      ${w.matList.filter(m=>m.aux).length?`<div class="kv"><div class="k" style="width:170px">辅料</div>
+        <div class="v" style="color:var(--tx2)">${w.matList.filter(m=>m.aux).map(m=>`${m.n} ${Math.ceil(m.per*w.devs.length)}${m.u}`).join(' · ')}（工位共用，不进个人领料单）</div></div>`:''}
+    </div>
+    ${w.emps.length?w.emps.map(id=>{ const n=leadN(id), part=wizPartN(id), e=emp(id);
+      const items=matMain.map(m=>{ const q=(w.mats[id]||{})[m.c]||0, on=q>0, mine=m.procs.includes(w.proc);
+        return `<div class="kv">
+          <div class="k" style="width:172px"><label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-size:12.5px">
+            <input type="checkbox" ${on?'checked':''} onchange="wizMatPick('${id}','${m.c}',this.checked)"> ${esc(m.n)}</label></div>
+          <div class="v">${on?`<input class="btn sm" style="width:74px;text-align:center;padding:2px 6px" value="${q}" onchange="wizMat('${id}','${m.c}',this.value)"> ${m.u}
+            <span style="color:var(--tx3);font-size:11.5px"> · 单台 ${m.per}${m.u}</span>`
+            :'<span style="color:var(--tx3);font-size:12px">不领</span>'}
+            <span class="badge ${mine?'':'warn'}" style="margin-left:6px">${mine?'本工序':m.procs.map(p=>PROC[p].name).join('/')}</span></div></div>`;}).join('');
+      return `<div style="margin-bottom:12px;border-top:1px dashed var(--line);padding-top:8px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <b style="font-size:13px">${e.name}</b><span class="badge">主责 ${n} 台${part>n?' · 协作 '+(part-n)+' 台':''}</span>
+        <span style="font-size:11.5px;color:var(--tx3)">勾选＝要领；数量默认按主责台数算</span></div>${items}</div>`;}).join('')
+      :'<div class="empty">请先选择参与的人</div>'}
+    ${aux.length?`<div style="margin-top:10px;border:1px dashed var(--line2);border-radius:var(--r);padding:10px;background:#fafbfc">
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:4px">辅料（工位共用，不进个人领料单）</div>
+      ${aux.map(m=>`<div class="kv"><div class="k">${esc(m.n)}</div><div class="v">共领 ${Math.ceil(m.per*w.devs.length)} ${m.u} · ${m.wh}</div></div>`).join('')}</div>`:''}
+  </div>
+  <div class="card"><h4>④ 什么时候做完</h4>
+    <div class="frm">
+      <div class="fld"><label>计划开始</label><input type="date" id="wStart" value="${w.start}" onchange="wizDate('start',this.value)"></div>
+      <div class="fld"><label>计划完成</label><input type="date" id="wEnd" value="${w.end}" onchange="wizDate('end',this.value)"></div>
+    </div></div>
+  <div class="bar-btm">
+    <span>${w.devs.length} 台 · ${w.emps.length} 人${un?' · '+badge(un+' 台未指定人','warn'):''}</span>
+    <span style="display:flex;gap:8px">
+      <button class="btn" onclick="S.sub=null;render()">取消</button>
+      <button class="btn ok" ${(w.emps.length&&!un)?'':'disabled'} onclick="wizSubmit()">确认派工 → 出领料单</button>
+    </span></div>`;
+}
+function startWiz(pid){
+  const gid=G(), sel=S.sel.slice();
+  if(!sel.length){ toast('请先勾选设备','err'); return; }
+  const procs=[...new Set(sel.flatMap(sn=>dev(sn).steps.filter(s=>s.g===gid&&!s.e).map(s=>s.p)))];
+  if(!procs.length){ toast('勾选的设备本组工序都已派完','err'); return; }
+  const emps=empOfGroup(gid).map(e=>e.id);
+  S.wiz={ proj:pid, proc:procs[0], devs:sel, emps:emps.slice(0,Math.min(2,emps.length)), devEmp:{}, mats:{},
+          matList:batchMatList(sel),
+          start:dev(sel[0]).planStart||addD(TODAY,0), end:dev(sel[0]).planEnd||addD(TODAY,3) };
+  wizAvg(); S.sub='wiz'; render();
+}
+
+/* ---------- 设备物料单（一台设备按它要走的工序汇总出来的物料清单） ---------- */
+function devMatOf(d){
+  const out={};
+  d.steps.forEach(s=>{
+    (MAT[s.p]||[]).forEach(m=>{
+      if(!out[m.c]) out[m.c]={ c:m.c, n:m.n, sp:m.sp, u:m.u, per:0, wh:m.wh, aux:!!m.aux, procs:[] };
+      out[m.c].per+=m.per;
+      if(!out[m.c].procs.includes(s.p)) out[m.c].procs.push(s.p);
+    });
+  });
+  return Object.values(out);
+}
+/* 一批设备的物料单（同一物料跨工序合并） */
+function batchMatList(devs){
+  const out={};
+  (devs||[]).forEach(sn=>devMatOf(dev(sn)).forEach(m=>{
+    if(!out[m.c]) out[m.c]={ c:m.c, n:m.n, sp:m.sp, u:m.u, per:m.per, wh:m.wh, aux:!!m.aux, procs:[] };
+    m.procs.forEach(p=>{ if(!out[m.c].procs.includes(p)) out[m.c].procs.push(p); });
+  }));
+  return Object.values(out).sort((a,b)=>(a.aux?1:0)-(b.aux?1:0));
+}
+/* 派工向导里用到的统计 */
+function wizLeadN(id){ const w=S.wiz; return w.devs.filter(sn=>(w.devEmp[sn]||[])[0]===id).length; }
+function wizPartN(id){ const w=S.wiz; return w.devs.filter(sn=>(w.devEmp[sn]||[]).includes(id)).length; }
+
+/* ---------- 领料 ---------- */
+function viewPick(){
+  const gid=G();
+  const ds=DISPATCH.filter(x=>x.group===gid);
+  const list=ds.map(x=>litem(`pick('${x.id}')`,`${PROC[x.proc].name} · ${x.devs.length} 台`,
+    `${x.id} · ${esc(proj(x.proj).name)} · ${x.start} ~ ${x.end}`,
+    badge(x.st==='done'?'已完工':'在制',x.st==='done'?'ok':'pri'),S.cur===x.id?'on':'')).join('')
+    ||'<div class="empty">本组还没有派工单</div>';
+  if(!S.cur||!DISPATCH.some(x=>x.id===S.cur)) return { lh:['领料','按派工单看领料明细'], list, panel:'<div class="empty">选择左侧派工单</div>' };
+  const x=DISPATCH.find(y=>y.id===S.cur);
+  if(S.sub==='tr'&&S.tr&&S.tr.dispId===x.id) return { lh:['人员调配',`${PROC[x.proc].name} · ${x.devs.length} 台`], list, panel:viewTr(x) };
+  const slips=PICK.filter(s=>s.dispId===x.id);
+  const trs=TRANSFER.filter(t=>t.dispId===x.id);
+  const auxSum={};
+  (x.aux||[]).forEach(a=>{ auxSum[a.c]=(auxSum[a.c]||0)+a.q; });
+  const body=`<div class="ph"><div class="crumb">领料 · ${x.id}</div><h2>${PROC[x.proc].name} · ${x.devs.length} 台</h2>
+    <p>${esc(proj(x.proj).name)} · 计划 ${x.start} ~ ${x.end} · 每人一张个人领料单</p></div>
+  ${hbar([['派工设备',x.devs.length+' 台'],['参与人员',x.workers.length+' 人'],['个人领料单',slips.length+' 张'],['人员调配',trs.length+' 次']])}
+  <div class="card"><h4>本次派工的设备</h4><div class="chips">${x.devs.map(sn=>`<span class="chip">${sn}</span>`).join('')}</div></div>
+  <div class="card"><h4>人员分工与调配 <span class="sp">请假 / 调班时，把设备连物料一起转给别人，前后记录都留档</span></h4>
+    ${x.workers.map(wk=>{ const slip=PICK.find(s=>s.dispId===x.id&&s.emp===wk.emp);
+      const q=(wk.mats||[]).reduce((a,m)=>a+m.q,0);
+      return `<div class="prow">
+        <div class="av">${initials(emp(wk.emp).name)}</div>
+        <div class="m"><div class="t">${emp(wk.emp).name}${emp(wk.emp).leader?' · 组长':''}</div>
+          <div class="s">负责 ${wk.devs.length} 台 · 物料 ${(wk.mats||[]).length} 项 ${q} 件${slip?` · 领料单 ${slip.no}（${slip.st==='done'?'已出库':'待领'}）`:''}</div>
+          <div class="chips" style="margin-top:6px">${wk.devs.map(sn=>`<span class="chip">${sn}</span>`).join('')}</div></div>
+        <button class="btn sm" ${wk.devs.length?'':'disabled'} onclick="trStart('${x.id}','${wk.emp}')">转交 / 调班</button>
+      </div>`;}).join('')||'<div class="empty">该派工单没有参与人员</div>'}
+  </div>
+  ${trs.length?`<div class="card"><h4>调配记录（${trs.length} 次） <span class="sp">按时间倒序，物料随同转交的数量也记在案</span></h4>
+    ${trs.slice().reverse().map(t=>`<div class="kv"><div class="k">${t.at}</div><div class="v">
+      <b>${emp(t.from).name}</b> → <b>${emp(t.to).name}</b> · ${t.devs.join('、')}（${t.devs.length} 台）
+      <div style="font-size:11.5px;color:var(--tx2);margin-top:2px">物料随同转交：${t.mats.map(m=>m.n+' '+m.q+m.u).join('、')||'—'}<br>原因：${esc(t.reason)} · 操作人：${esc(t.by)}</div>
+      </div></div>`).join('')}
+  </div>`:''}
+  <div class="card"><h4>个人领料单 <span class="sp">点「打印」出单，员工拿单到库房扫码</span></h4>
+    ${slips.length?slips.map(s=>`<div class="card" style="margin-bottom:8px;border-color:var(--line2)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div class="av" style="width:30px;height:30px;flex:0 0 30px;border-radius:50%;background:var(--pri-bg);color:var(--pri);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">${initials(emp(s.emp).name)}</div>
+        <div style="flex:1"><b style="font-size:13px">${emp(s.emp).name}</b> <span class="badge">${s.no}</span></div>
+        ${badge(s.st==='done'?'已领':'待领',s.st==='done'?'ok':'warn')}
+        <button class="btn sm" onclick="doPick('${s.no}')">${s.st==='done'?'已出库':'打印 / 出库'}</button>
+      </div>
+      ${s.items.map(it=>`<div class="kv"><div class="k">${esc(it.n)}</div><div class="v">${it.q} · ${esc(it.wh)}</div></div>`).join('')}
+    </div>`).join(''):'<div class="empty">该派工单还没有生成个人领料单</div>'}
+  </div>
+  ${Object.keys(auxSum).length?`<div class="card"><h4>辅料（工位共用）</h4>
+    ${Object.keys(auxSum).map(c=>{ const m=(MAT[x.proc]||[]).find(z=>z.c===c);
+      return kv(m?m.n:c, auxSum[c]+' '+(m?m.u:''));}).join('')}
+    <div class="note warn" style="margin-top:8px">出库后在工位持续使用，无法关联到具体柜体，不进个人领料单、不计入个人物料明细。</div></div>`:''}`;
+  return { lh:['领料',`${grp(gid).name} · ${ds.length} 张派工单`], list, panel:body };
+}
+
+/* ---------- 人员调配（调班：设备连物料一起转交，留前后记录） ---------- */
+function viewTr(x){
+  const t=S.tr, gid=G();
+  const fromW=x.workers.find(w=>w.emp===t.from);
+  const cands=empOfGroup(gid).filter(e=>e.id!==t.from);
+  const list=(MAT[x.proc]||[]).filter(m=>!m.aux);
+  const mats=list.map(m=>({ c:m.c, n:m.n, u:m.u, q:Math.ceil(m.per*t.devs.length) }));
+  const auxList=(MAT[x.proc]||[]).filter(m=>m.aux);
+  const total=mats.reduce((a,m)=>a+m.q,0);
+  const ok=t.from&&t.to&&t.devs.length&&t.reason.trim();
+  return `<div class="ph"><div class="crumb">人员调配 · ${x.id}</div><h2>把设备连物料一起转给别人</h2>
+    <p>${PROC[x.proc].name} · ${esc(proj(x.proj).name)} · 用于请假、调班等人员变动，转交前后都留记录</p></div>
+  ${hbar([['转出',t.from?emp(t.from).name:'—'],['转交设备',t.devs.length+' 台'],['转入',t.to?emp(t.to).name:'—'],['随同物料',total+' 件']])}
+  <div class="card"><h4>① 谁要转出</h4>
+    <div class="chips">${x.workers.map(w=>`<span class="chip ${t.from===w.emp?'on':''}" onclick="trFrom('${w.emp}')">${emp(w.emp).name}（${w.devs.length} 台）</span>`).join('')||'<div class="empty">没有参与人员</div>'}</div></div>
+  ${t.from?`<div class="card"><h4>② 转交哪几台设备 <span class="sp">默认他名下全部，可只转一部分</span></h4>
+    ${(fromW?fromW.devs:[]).map(sn=>{ const on=t.devs.includes(sn), st=dev(sn).steps.find(z=>z.p===x.proc);
+      return `<div class="pick ${on?'on':''}" onclick="trDev('${sn}')"><div class="box">${on?'✓':''}</div>
+        <div class="m"><div class="t">${sn}</div>
+        <div class="s">${st&&st.ps?'计划 '+st.ps+' ~ '+st.pe:'—'}${st&&st.st==='doing'?' · 在制':''}</div></div>
+        <div class="r">${emp(fromW.emp).name}</div></div>`;}).join('')||'<div class="empty">他名下没有设备</div>'}
+    <div style="display:flex;gap:12px;margin-top:8px"><span class="lnk" onclick="trAll(1)">全选</span><span class="lnk" onclick="trAll(0)">清空</span></div>
+  </div>
+  <div class="card"><h4>③ 转给谁</h4>
+    <div class="chips">${cands.map(e=>`<span class="chip ${t.to===e.id?'on':''}" onclick="trTo('${e.id}')">${e.name}${e.leader?' · 组长':''}（${empMapCount(x,e.id)} 台）</span>`).join('')||'<div class="empty">本组没有其他人</div>'}</div>
+  </div>
+  <div class="card"><h4>④ 随同转交的物料 <span class="sp">按转交台数 × 单台用量计算，一并转到接收人</span></h4>
+    ${mats.length?mats.map(m=>kv(m.n, `<b>${m.q}</b> ${m.u} <span style="color:var(--tx3);font-size:11.5px">（单台 ${list.find(y=>y.c===m.c).per}${m.u} × ${t.devs.length} 台）</span>`)).join(''):'<div class="empty">这道工序没有主材</div>'}
+    ${auxList.length?kv('辅料', `${auxList.map(m=>m.n).join('、')}（工位共用，不随人转交）`):''}
+    <div class="note warn" style="margin-top:8px">原领料单会按转交数量减项，接收人会拿到一张对应的领料单；若原单已出库，实物请线下移交。</div>
+  </div>
+  <div class="card"><h4>⑤ 转交原因 <span class="sp">请选择或填写，会记入调配记录</span></h4>
+    <div class="chips">${['请假调班','支援其他工序','技能调整','设备/工位调整'].map(r=>`<span class="chip ${t.reason===r?'on':''}" onclick="trReason('${r}')">${r}</span>`).join('')}</div>
+    <div class="fld" style="margin-top:8px"><input id="trNote" value="${esc(t.reason)}" onchange="trReason(this.value)" placeholder="补充说明，例如：王志强 9/22-9/23 请假"></div>
+  </div>
+  <div class="bar-btm">
+    <span>${t.devs.length} 台设备 + ${total} 件物料：<b>${t.from?emp(t.from).name:'—'}</b> → <b>${t.to?emp(t.to).name:'—'}</b></span>
+    <span style="display:flex;gap:8px">
+      <button class="btn" onclick="S.sub=null;S.tr=null;render()">取消</button>
+      <button class="btn ok" ${ok?'':'disabled'} onclick="doTransfer()">确认转交</button>
+    </span></div>`:''}`;
+}
+function empMapCount(x,empId){ const w=x.workers.find(z=>z.emp===empId); return w?w.devs.length:0; }
+function trStart(dispId,from){
+  const x=DISPATCH.find(y=>y.id===dispId), w=x.workers.find(z=>z.emp===from);
+  S.tr={ dispId, from, to:'', devs:(w?w.devs:[]).slice(), reason:'请假调班' };
+  S.sub='tr'; render();
+}
+function trFrom(id){
+  const x=DISPATCH.find(y=>y.id===S.tr.dispId), w=x.workers.find(z=>z.emp===id);
+  S.tr.from=id; S.tr.devs=(w?w.devs:[]).slice(); if(S.tr.to===id) S.tr.to='';
+  render();
+}
+function trTo(id){ S.tr.to=id; render(); }
+function trDev(sn){ const a=S.tr.devs, i=a.indexOf(sn); if(i>=0)a.splice(i,1); else a.push(sn); render(); }
+function trAll(f){
+  const x=DISPATCH.find(y=>y.id===S.tr.dispId), w=x.workers.find(z=>z.emp===S.tr.from);
+  S.tr.devs = f? (w?w.devs:[]).slice() : []; render();
+}
+function trReason(v){ S.tr.reason=v||''; render(); }
+/* 执行转交：设备 → 人 → 物料（领料单）一次到位，并写调配记录 */
+function doTransfer(){
+  const t=S.tr, x=DISPATCH.find(y=>y.id===t.dispId);
+  if(!x){ toast('派工单已失效','err'); return; }
+  if(!t.from||!t.to){ toast('请选择转出和转入人员','err'); return; }
+  if(!t.devs.length){ toast('请勾选要转交的设备','err'); return; }
+  if(!t.reason.trim()){ toast('请填写转交原因','err'); return; }
+  const fromW=x.workers.find(w=>w.emp===t.from), toW=x.workers.find(w=>w.emp===t.to);
+  const list=(MAT[x.proc]||[]).filter(m=>!m.aux);
+  const mats=list.map(m=>({ c:m.c, n:m.n, u:m.u, q:Math.ceil(m.per*t.devs.length), wh:m.wh }));
+  // 转出人：设备移出 + 领料单减项
+  fromW.devs=fromW.devs.filter(sn=>!t.devs.includes(sn));
+  fromW.lead=(fromW.lead||[]).filter(sn=>!t.devs.includes(sn));
+  const fs=PICK.find(p=>p.dispId===x.id&&p.emp===t.from);
+  if(fs){ mats.forEach(m=>{ const it=fs.items.find(z=>z.c===m.c); if(it) it.q=Math.max(0,it.q-m.q); });
+          fs.items=fs.items.filter(z=>z.q>0); }
+  // 转入人：设备并入 + 领料单加项
+  if(!toW){ x.workers.push({ emp:t.to, devs:t.devs.slice(), lead:t.devs.slice(), mats:mats.map(m=>({c:m.c,q:m.q})) }); }
+  else {
+    t.devs.forEach(sn=>{ if(!toW.devs.includes(sn)) toW.devs.push(sn);
+      toW.lead=toW.lead||[]; if(!toW.lead.includes(sn)) toW.lead.push(sn); });
+    toW.mats=toW.mats||[];
+    mats.forEach(m=>{ const z=toW.mats.find(y=>y.c===m.c); if(z) z.q+=m.q; else toW.mats.push({c:m.c,q:m.q}); });
+  }
+  let ts=PICK.find(p=>p.dispId===x.id&&p.emp===t.to);
+  if(!ts){ ts={ no:nextNo('LL'), dispId:x.id, emp:t.to, st:'待领',
+    items:mats.map(m=>({ c:m.c, n:m.n, q:m.q, wh:m.wh })) }; PICK.push(ts); }
+  else { mats.forEach(m=>{ const z=ts.items.find(y=>y.c===m.c);
+    if(z) z.q+=m.q; else ts.items.push({ c:m.c, n:m.n, q:m.q, wh:m.wh }); }); }
+  // 设备工序负责人（主责顺延给接收人，转出人从协作名单里移除）
+  t.devs.forEach(sn=>{ const st=dev(sn).steps.find(z=>z.p===x.proc); if(!st) return;
+    if(st.e===t.from) st.e=t.to;
+    st.es=(st.es||[]).filter(z=>z!==t.from);
+    if(!st.es.includes(t.to)) st.es.push(t.to); });
+  // 留档
+  TRANSFER.push({ id:nextNo('DB'), at:TODAY+' 09:20', dispId:x.id, proj:x.proj, proc:x.proc,
+    from:t.from, to:t.to, devs:t.devs.slice(), mats, reason:t.reason,
+    by:S.role==='leader'? emp(GROUPS.filter(g=>g.id===G())[0].leader).name : '张建军' });
+  x.workers=x.workers.filter(w=>w.devs.length);
+  toast(`${emp(t.from).name} 的 ${t.devs.length} 台设备 + ${mats.reduce((a,m)=>a+m.q,0)} 件物料已转交 ${emp(t.to).name}，记录已留存`,'ok');
+  S.sub=null; S.tr=null; render();
+}
+
+/* ---------- 每日报工 ---------- */
+function viewReport(){
+  const gid=S.role==='leader'?G():null;
+  const ds=DEV.filter(d=>!d.inbound && d.steps.some(s=>s.st==='doing'))
+    .filter(d=> S.role==='worker' ? d.steps.some(s=>s.e===ME()&&s.st!=='done') : (!gid || d.steps.some(s=>s.g===gid)));
+  const list=ds.map(d=>{ const cur=devCurStep(d);
+    return litem(`pick('${d.sn}')`,d.sn,`${esc(proj(d.proj).name)} · ${cur?PROC[cur.p].name:'—'} · ${cur&&cur.e?emp(cur.e).name:'未派工'}`,
+      `<b>${devPct(d)}%</b>`,S.cur===d.sn?'on':'');}).join('')||'<div class="empty">今天没有待报工的设备</div>';
+  if(!S.cur||!dev(S.cur)) return { lh:['每日报工','按设备报进度 · 安装件数'], list, panel:'<div class="empty">选择左侧设备开始报工</div>' };
+  const d=dev(S.cur), cur=devCurStep(d)||d.steps[d.steps.length-1];
+  const p=proj(d.proj);
+  const body=`<div class="ph"><div class="crumb">报工 · ${esc(p.name)}</div><h2>${d.sn}</h2>
+    <p>当前工序：${PROC[cur.p].name} · ${cur.g?grp(cur.g).name:'—'} · ${cur.e?emp(cur.e).name+((cur.es&&cur.es.length>1)?' 等 '+cur.es.length+' 人共同负责':''):'未派工'}</p></div>
+  ${hbar([['设备进度',devPct(d)+'%'],['已完成工序',d.steps.filter(s=>s.st==='done').length+'/'+d.steps.length],['本项目工序计划',(cur.ps?cur.ps.slice(5)+' ~ '+cur.pe.slice(5):'—')],['项目交期',p.due]])}
+  <div class="card"><h4>这台设备的工序</h4>
+    ${d.steps.map(s=>`<div class="kv"><div class="k">${PROC[s.p].ind?'◆ ':''}${PROC[s.p].name}</div>
+      <div class="v">${badge(s.st==='done'?'已完工':s.st==='doing'?'在制':'未开工',s.st==='done'?'ok':s.st==='doing'?'warn':'')}
+      ${s.e?' · '+emp(s.e).name:''}${s.inst?' · 已装 '+s.inst+' 件':''}</div></div>`).join('')}
+    ${stepbar(d)}
+  </div>
+  <div class="card"><h4>今日报工内容</h4>
+    <div class="frm">
+      <div class="fld"><label>安装件数（件）</label><input id="rInst" type="number" min="0" value="0"></div>
+      <div class="fld"><label>完成台数（台）</label><input id="rOk" type="number" min="0" value="0"></div>
+      <div class="fld"><label>自检合格数（台）</label><input id="rGood" type="number" min="0" value="0"></div>
+      <div class="fld"><label>不合格 / 返工（台）</label><input id="rBad" type="number" min="0" value="0"></div>
+    </div>
+    <div class="fld"><label>备注</label><input id="rNote" placeholder="例如：等料 1 小时"></div>
+    <div class="note">完成台数填 1 表示这台柜的当前工序做完，自动流转到下一道工序。</div>
+  </div>
+  <div class="bar-btm">
+    <span style="font-size:12.5px;color:var(--tx2)">按台计件，不统计工时</span>
+    <button class="btn pri" onclick="doReport('${d.sn}')">提交报工</button>
+  </div>
+  ${REPORT.filter(r=>r.dev===d.sn).length?`<div class="card"><h4>这台设备的报工记录</h4>
+    ${REPORT.filter(r=>r.dev===d.sn).slice(-6).reverse().map(r=>kv(r.date,`${PROC[r.proc].name} · 装 ${r.inst} 件 · 完成 ${r.ok} 台${r.bad?' · 返工 '+r.bad:''}`)).join('')}</div>`:''}`;
+  return { lh:['每日报工',`${ds.length} 台待报`], list, panel:body };
+}
+
+/* ---------- 检验入库 ---------- */
+function viewInbound(){
+  const ds=DEV.filter(d=>!d.inbound && d.steps.every(s=>s.st==='done'));
+  const list=ds.map(d=>litem(`pick('${d.sn}')`,d.sn,`${esc(proj(d.proj).name)} · ${d.steps.length} 道工序已完工`,badge('待检验','ok'),S.cur===d.sn?'on':'')).join('')
+    ||'<div class="empty">没有待检验的设备</div>';
+  if(!S.cur||!dev(S.cur)) return { lh:['检验入库','自检 → 生产签字 → 入生产库'], list, panel:'<div class="empty">选择左侧设备</div>' };
+  const d=dev(S.cur), ck=d.self.items||{};
+  const n=Object.values(ck).filter(Boolean).length;
+  const body=`<div class="ph"><div class="crumb">检验入库 · ${esc(proj(d.proj).name)}</div><h2>${d.sn}</h2>
+    <p>出厂编号 ${d.seq} · ${d.steps.length} 道工序全部完工，自检合格后入生产成品库</p></div>
+  ${hbar([['工序',d.steps.length+' 道'],['自检项',n+'/'+SELF_CHECK.length],['状态',d.inbound?'已入库':'待检验']])}
+  <div class="card"><h4>过程检（自查） <span class="sp">逐项确认</span></h4>
+    ${SELF_CHECK.map((t,i)=>`<div class="pick ${ck[i]?'on':''}" ${d.inbound?'':`onclick="chkSelf(${i})"`}>
+      <div class="box">${ck[i]?'✓':''}</div><div class="m"><div class="t">${t}</div></div>
+      <div class="r">${ck[i]?'合格':'待检'}</div></div>`).join('')}
+  </div>
+  <div class="card"><h4>生产签字确认</h4>
+    ${kv('签字人',d.self.by?esc(d.self.by):'—')}${kv('签字时间',d.self.at||'—')}
+    ${d.inbound?kv('入库单',d.inbound):`<div class="frm"><div class="fld"><label>签字人</label>
+      <input id="signName" value="${S.role==='leader'?emp(GROUPS.find(g=>g.id===G()).leader).name:'王志强'}"></div></div>`}
+  </div>
+  ${d.inbound?`<div class="note ok">已入生产成品库，入库单 ${d.inbound}。</div>`
+   :`<div class="bar-btm">
+      <span>${n===SELF_CHECK.length?'自检项已全部确认':'请确认全部自检项'}</span>
+      <button class="btn ok" ${n===SELF_CHECK.length?'':'disabled'} onclick="doInbound('${d.sn}')">确认入库</button>
+    </div>`}`;
+  return { lh:['检验入库',`${ds.length} 台待检验`], list, panel:body };
+}
+/* ============================ 10. 员工端页面 ============================ */
+const ME = () => S.me || 'E12';
+function myDevs(){ return DEV.filter(d=>d.steps.some(s=>s.st!=='done'&&(s.e===ME()||(s.es||[]).includes(ME())))); }
+function viewMyTask(){
+  const ds=myDevs();
+  const list=ds.map(d=>{ const cur=devCurStep(d);
+    return litem(`pick('${d.sn}')`,d.sn,`${esc(proj(d.proj).name)} · ${cur?PROC[cur.p].name:'—'}`,`<b>${devPct(d)}%</b>`,S.cur===d.sn?'on':'');}).join('')
+    ||'<div class="empty">你现在没有在做的设备</div>';
+  if(!S.cur||!dev(S.cur)) return { lh:['我的任务',`${emp(ME()).name} · ${grp(EMP.find(e=>e.id===ME()).g).name}`], list, panel:'<div class="empty">选择左侧设备</div>' };
+  const d=dev(S.cur), cur=devCurStep(d)||d.steps[0], p=proj(d.proj);
+  const slip=PICK.find(s=>s.emp===ME()&&s.items.length&&DISPATCH.find(x=>x.id===s.dispId&&x.devs.includes(d.sn)));
+  const mats=(MAT[cur.p]||[]).filter(m=>!m.aux);
+  const body=`<div class="ph"><div class="crumb">我的任务 · ${esc(p.name)}</div><h2>${d.sn}</h2>
+    <p>${PROC[cur.p].name} · ${grp(cur.g).name} · 出厂编号 ${d.seq}</p></div>
+  ${hbar([['设备进度',devPct(d)+'%'],['我的工序',PROC[cur.p].name],['计划完成',cur.pe?cur.pe.slice(5):(cur.d?(DISPATCH.find(x=>x.id===cur.d)||{}).end:'—')]])}
+  <div class="card"><h4>这台设备的工序</h4>
+    ${d.steps.map(s=>`<div class="kv"><div class="k">${PROC[s.p].ind?'◆ ':''}${PROC[s.p].name}</div>
+      <div class="v">${badge(s.st==='done'?'已完工':s.st==='doing'?'在制':'未开工',s.st==='done'?'ok':s.st==='doing'?'warn':'')}
+      ${s.e?' · '+emp(s.e).name+(s.e===ME()?'（我）':''):''}</div></div>`).join('')}${stepbar(d)}</div>
+  <div class="card"><h4>这道工序要用的料</h4>
+    ${mats.map(m=>kv(m.n,`${m.per} ${m.u} / 台 · ${m.wh}`)).join('')}
+    ${(MAT[cur.p]||[]).filter(m=>m.aux).length?`<div class="note warn" style="margin-top:8px">辅料（${(MAT[cur.p]||[]).filter(m=>m.aux).map(m=>m.n).join('、')}）在工位共用，不用个人领。</div>`:''}
+  </div>
+  ${slip?`<div class="card"><h4>我的领料单 <span class="sp">${slip.no}</span>${badge(slip.st==='done'?'已领':'待领',slip.st==='done'?'ok':'warn')}</h4>
+    ${slip.items.map(it=>kv(it.n,`${it.q} · ${esc(it.wh)}`)).join('')}</div>`:''}
+  <div class="bar-btm">
+    <span style="font-size:12.5px;color:var(--tx2)">做完当天记得报工</span>
+    <button class="btn pri" onclick="go('report','${d.sn}')">去报工 →</button>
+  </div>`;
+  return { lh:['我的任务',`${ds.length} 台在做`], list, panel:body };
+}
+function viewMyPick(){
+  const slips=PICK.filter(s=>s.emp===ME());
+  const list=slips.map(s=>litem(`pick('${s.no}')`,s.no,`${PROC[(DISPATCH.find(x=>x.id===s.dispId)||{}).proc]?PROC[(DISPATCH.find(x=>x.id===s.dispId)||{}).proc].name:''} · ${s.items.length} 项`,
+    badge(s.st==='done'?'已领':'待领',s.st==='done'?'ok':'warn'),S.cur===s.no?'on':'')).join('')||'<div class="empty">你还没有领料单</div>';
+  if(!S.cur||!PICK.some(s=>s.no===S.cur)) return { lh:['我的领料','拿单到库房扫码'], list, panel:'<div class="empty">选择左侧领料单</div>' };
+  const s=PICK.find(x=>x.no===S.cur), x=DISPATCH.find(y=>y.id===s.dispId)||{};
+  const body=`<div class="ph"><div class="crumb">我的领料单</div><h2>${s.no}</h2><p>${PROC[x.proc]?PROC[x.proc].name:''} · 设备 ${(x.devs||[]).join('、')}</p></div>
+  ${hbar([['物料项',s.items.length+' 项'],['合计件数',s.items.reduce((a,i)=>a+i.q,0)+''],['状态',s.st==='done'?'已领':'待领']])}
+  <div class="card"><h4>领料明细</h4>${s.items.map(i=>kv(i.n,`${i.q} · ${esc(i.wh)}`)).join('')}</div>
+  <div class="bar-btm">
+    <span style="font-size:12.5px;color:var(--tx2)">库房扫码发货后状态变「已领」</span>
+    <button class="btn pri" ${s.st==='done'?'disabled':''} onclick="doPick('${s.no}')">${s.st==='done'?'已出库':'扫码领料'}</button>
+  </div>`;
+  return { lh:['我的领料',`${slips.length} 张`], list, panel:body };
+}
+function viewMyPay(){
+  const rows=[];
+  DEV.forEach(d=>d.steps.forEach(s=>{
+    if(s.st!=='done') return;
+    const arr=(s.es&&s.es.length)?s.es:(s.e?[s.e]:[]);
+    if(!arr.includes(ME())) return;
+    rows.push({ p:s.p, proj:d.proj, co:arr.length, amt:PROC[s.p].price/arr.length });   // 多人共做 → 按人数均分
+  }));
+  const byProj={}; rows.forEach(r=>{ byProj[r.proj]=(byProj[r.proj]||0)+r.amt; });
+  const list=Object.keys(byProj).map(k=>litem(`pick('${k}')`,esc(proj(k).name),`${k} · ${rows.filter(r=>r.proj===k).length} 台`,`<b>${money(byProj[k])}</b>`,S.cur===k?'on':'')).join('')
+    ||'<div class="empty">本月还没有完工工序</div>';
+  const total=rows.reduce((a,r)=>a+r.amt,0);
+  const validCur=(S.cur&&byProj[S.cur])?S.cur:null;
+  const cur=validCur?rows.filter(r=>r.proj===validCur):rows;
+  const body=`<div class="ph"><div class="crumb">我的计件</div><h2>${money(total)}</h2><p>按完工台数 × 工序单价核算，纯计件、不统计工时</p></div>
+  ${hbar([['完工台数',rows.length+' 台'],['涉及项目',Object.keys(byProj).length+' 个'],['合计',money(total)]])}
+  <div class="card"><h4>${validCur?esc(proj(validCur).name)+' · ':''}计件明细 <span class="sp">仅供参考</span></h4>
+    ${cur.length?cur.map(r=>kv(PROC[r.p].name+' · '+esc(proj(r.proj).name)+(r.co>1?'（'+r.co+' 人共做 · 均分）':''),money(r.amt))).join(''):'<div class="empty">暂无明细</div>'}
+  </div>
+  <div class="note">公司只核算到班组，组内由组长自主分配，这里的金额是给你参考的估算。</div>`;
+  return { lh:['我的计件',`${rows.length} 台`], list, panel:body };
+}
+
+/* ============================ 11. 交互 ============================ */
+function pick(id){
+  S.cur=id; S.sel=[]; S.sub=null; S.procs=null; S.procGroup=null; S.wiz=null; S.pg=null; S.pd=null; S.pdc=null; S.tr=null;
+  document.body.classList.add('mobile-panel');
+  render();
+}
+function backList(){ document.body.classList.remove('mobile-panel'); }
+function toggle(sn){
+  const i=S.sel.indexOf(sn);
+  if(i<0) S.sel.push(sn); else S.sel.splice(i,1);
+  renderPanel();
+}
+function selAll(f){ const p=proj(S.cur); S.sel = f? devOf(p.id).map(d=>d.sn) : []; renderPanel(); }
+function selUndo2(pid){ S.sel=devOf(pid).filter(d=>d.steps.some(x=>!x.g)).map(d=>d.sn); renderPanel(); }
+function toggleProc(pid){
+  S.procs=S.procs||[]; const i=S.procs.indexOf(pid);
+  if(i<0) S.procs.push(pid); else S.procs.splice(i,1);
+  renderPanel();
+}
+function setProcGroup(pid,g){ S.procGroup=S.procGroup||{}; S.procGroup[pid]=g; }
+/* 某道工序在某批设备上的计划起止：已定过的优先，否则默认取设备排产窗口 */
+function asgRowDate(o,pid,sel){
+  const r=(S.pdc&&S.pdc[pid])||{};
+  // 已经定过的工序计划优先
+  const hit=devListOf(sel).find(d=>{ const st=d.steps.find(x=>x.p===pid); return st&&st.ps; });
+  if(hit){ const st=hit.steps.find(x=>x.p===pid); return { s:r.s||st.ps, e:r.e||st.pe }; }
+  // 否则默认取这批设备的排产窗口；独立工序（铜排线）前置 2 天
+  let s0='', e0='';
+  devListOf(sel).forEach(d=>{ if(!d.planStart) return;
+    if(!s0||d.planStart<s0) s0=d.planStart;
+    if(!e0||d.planEnd>e0) e0=d.planEnd; });
+  if(!s0){ s0=o.plan?o.plan.start:''; e0=o.plan?o.plan.end:''; }
+  const dft=PROC[pid].ind? { s:s0?addD(s0,-2):'', e:s0?addD(s0,-1):'' } : { s:s0, e:e0 };
+  return { s:r.s||dft.s, e:r.e||dft.e };
+}
+function setProcDate(pid,k,v){
+  S.pdc=S.pdc||{};
+  const o=proj(S.cur), sel=(S.asgSelCur||S.sel)||[];
+  const cur=asgRowDate(o,pid,sel);
+  const r=S.pdc[pid]||(S.pdc[pid]={ s:cur.s, e:cur.e });
+  r[k]=v;
+  if(r.s&&r.e&&r.e<r.s){ if(k==='e') r.s=v; else r.e=v; }
+  renderPanel();
+}
+function go(page,id){ S.page=page; S.cur=id||null; S.sel=[]; S.sub=null; S.procs=null; S.procGroup=null; S.wiz=null; S.pg=null; S.pd=null; S.pdc=null; S.tr=null; __lastPage=page; render(); }
+
+/* ---- 审核 ---- */
+function chk(pid,i){ S.checks[pid]=S.checks[pid]||{}; S.checks[pid][i]=!S.checks[pid][i]; renderPanel(); }
+function doAudit(id,pass){
+  const p=proj(id);
+  if(pass){ p.st='reviewed'; toast('审核通过，已转入排产','ok'); openPlan(id); }
+  else { p.st='rejected'; toast('已退回技术部','err'); render(); }
+}
+
+/* ---- 项目立项审核 ---- */
+function doProjAudit(id,pass){
+  const r=LIXIANG.find(x=>x.id===id);
+  if(!r||r.st!=='pending') return;
+  if(pass){
+    const craft = r.model==='KDC-12' ? 'GY01' : (r.model==='KDC-08' ? 'GY02' : 'GY03');
+    const today=TODAY.replace(/-/g,'');
+    const n=PROJ.filter(p=>p.id.indexOf('MO-'+today)===0).length+1;
+    const pid='MO-'+today+'-'+String(n).padStart(2,'0');
+    const p={ id:pid, name:r.name, cus:r.cus, product:r.product, model:r.model, qty:r.qty, craft,
+      ws:'总装车间', due:r.wantEnd, st:'pending_review', wantStart:r.wantStart,
+      from:'立项审核通过 · '+r.sales };
+    PROJ.push(p); mkDevices(p);
+    r.st='passed'; r.pid=pid;
+    toast(`立项通过：生成项目 ${pid} 与 ${r.qty} 台设备，进入任务书审核`,'ok');
+  } else {
+    const note=(val('paNote')||'').trim();
+    if(!note){ toast('驳回请填写审核意见','err'); return; }
+    r.st='rejected'; r.reason=note;
+    toast('已驳回该立项申请，退回销售部','err');
+  }
+  S.cur=null; render();
+}
+
+/* ---- 工序管理 ---- */
+function dwProcView(pid){
+  const p=PROC[pid]; if(!p) return;
+  const gs=procGroups(pid), used=procUsedIn(pid), mats=MAT[pid]||[];
+  const mtbl=mats.length?`<table class="mtbl">
+      <thead><tr><th>物料编码</th><th>物料名称</th><th>规格</th><th>单位</th><th class="num">单台用量</th><th>库位</th></tr></thead>
+      <tbody>${mats.map(m=>`<tr><td>${m.c}</td><td>${esc(m.n)}${m.aux?' <span class="badge">辅料</span>':''}</td><td>${esc(m.sp||'—')}</td><td>${esc(m.u||'—')}</td><td class="num">${m.per}</td><td>${esc(m.wh||'—')}</td></tr>`).join('')}</tbody>
+    </table>`:'<div class="note warn">这道工序还没有维护物料清单。</div>';
+  dwOpen('工序详情 · '+pid, `
+    <div class="dw-hero">
+      <div class="hrow">
+        <div class="hmain">
+          <div class="hname">${esc(p.name)}</div>
+          <div class="hcode">工序编码 ${pid}</div>
+        </div>
+        <div class="hb">
+          ${p.ind?'<span class="tag ind">前置独立</span>':'<span class="tag main">主链工序</span>'}
+          ${p.off?badge('已停用',''):badge('启用中','ok')}
+        </div>
+      </div>
+      <div class="hstats">
+        <div><div class="sl">标准周期</div><div class="sv">${p.days||1}<em>天</em></div></div>
+        <div><div class="sl">计件单价</div><div class="sv">${money(p.price||0)}<em>/ 台</em></div></div>
+        <div><div class="sl">被引用工艺</div><div class="sv">${used.length}<em>条</em></div></div>
+      </div>
+    </div>
+    <div class="sec-t">基本信息 <span class="sp">主数据 · 可编辑</span></div>
+    ${kv('作业说明',esc(p.note||'—'))}
+    ${kv('可承接班组',gs.map(g=>grp(g).name+'（'+emp(grp(g).leader).name+'）').join('、')||'未指定')}
+    <div class="sec-t">被工艺路线引用 <span class="sp">点击可跳转对应工艺 · 共 ${used.length} 条</span></div>
+    ${used.length?`<div class="chips">${used.map(cid=>`<span class="chip co" onclick="dwCraftView('${cid}')">${esc(CRAFT[cid].name)}</span>`).join('')}</div>`
+      :'<div class="note warn">还没有工艺路线使用这道工序，可到「工艺」页添加工序。</div>'}
+    <div class="sec-t">工序物料清单 <span class="sp">单台柜用量 · 共 ${mats.length} 项</span></div>
+    <div class="mt-wrap">${mtbl}</div>
+  `, `<button class="btn" onclick="dwClose()">关闭</button>
+      <button class="btn pri" onclick="dwProcEdit('${pid}')">编辑工序</button>`);
+}
+function dwProcEdit(pid){
+  const p=PROC[pid]; if(!p) return;
+  DWG={mode:'edit', pid, code:pid, name:p.name, days:p.days||1, price:p.price||0,
+       note:p.note||'', ind:!!p.ind, off:!!p.off, groups:procGroups(pid).slice(), confirmDel:false};
+  renderProcForm();
+}
+function dwProcNew(){
+  let mx=0; PROC_LIST.forEach(id=>{ const n=parseInt(String(id).replace(/\D/g,''),10)||0; if(n>mx) mx=n; });
+  DWG={mode:'new', pid:null, code:'GX'+String(mx+1).padStart(2,'0'), name:'', days:2, price:0,
+       note:'', ind:false, off:false, groups:[GROUPS[0].id], confirmDel:false};
+  renderProcForm();
+}
+function dwProcSync(){
+  if(!DWG || !$('qName')) return;
+  DWG.name=val('qName'); DWG.days=val('qDays'); DWG.price=val('qPrice');
+  DWG.note=val('qNote'); DWG.off=val('qOff')==='1';
+}
+function dwProcInd(v){ dwProcSync(); DWG.ind=!!v; renderProcForm(); }
+function dwProcGrp(gid){
+  dwProcSync();
+  const i=DWG.groups.indexOf(gid);
+  if(i>=0) DWG.groups.splice(i,1); else DWG.groups.push(gid);
+  renderProcForm();
+}
+function renderProcForm(){
+  const d=DWG, isNew=d.mode==='new';
+  const used=isNew?[]:procUsedIn(d.pid);
+  const grpChips=GROUPS.map(g=>{ const on=d.groups.includes(g.id);
+    return `<span class="chip ${on?'on':''}" onclick="dwProcGrp('${g.id}')">${on?'✓ ':''}${g.name} · ${emp(g.leader).name}</span>`;}).join('');
+  const del=isNew?'':`<button class="btn del ${d.confirmDel?'on':''}" onclick="dwProcDel()">${d.confirmDel?'再点一次确认删除':(used.length?'删除（被引用）':'删除')}</button>`;
+  dwOpen(isNew?('新建工序 · '+d.code):('编辑工序 · '+d.pid), `
+    <div class="note">${isNew?'创建后会出现在「工艺路线 → 添加工序」的候选里。':'修改保存后立即生效；已被工艺路线引用的工序不能删除，可改为「已停用」。'}</div>
+    <div class="frm"><div class="fld"><label>工序名称 <i class="req">*</i></label><input id="qName" value="${esc(d.name)}" placeholder="例如：二次线"></div></div>
+    <div class="frm">
+      <div class="fld"><label>标准周期（天）</label><input id="qDays" type="number" min="1" value="${esc(d.days)}"></div>
+      <div class="fld"><label>计件单价（元/台）</label><input id="qPrice" type="number" min="0" value="${esc(d.price)}"></div>
+    </div>
+    <div class="fld" style="margin-bottom:14px"><label>作业说明</label><input id="qNote" value="${esc(d.note)}" placeholder="工艺要点 / 质量要求"></div>
+    <div class="fld" style="margin-bottom:14px"><label>工序类型</label>
+      <div class="seg">
+        <button class="${d.ind?'':'on'}" onclick="dwProcInd(0)">主链工序</button>
+        <button class="${d.ind?'on':''}" onclick="dwProcInd(1)">前置独立</button>
+      </div>
+      <div class="hint">${d.ind?'不参与主工序链，自动排到开工之前（如铜排线这类先加工再进柜的工序）。':'按工艺路线里排定的顺序参与主工序链。'}</div>
+    </div>
+    <div class="fld" style="margin-bottom:14px"><label>可承接班组 <i class="req">*</i></label>
+      <div class="chips">${grpChips}</div>
+      <div class="hint">可多选：只勾一个＝专组专做；勾多个＝人手紧时可跨组支援。派单候选班组 = 排产勾选的参与班组 ∩ 这里勾选的班组。</div>
+    </div>
+    <div class="fld"><label>状态</label>
+      <select id="qOff"><option value="0" ${d.off?'':'selected'}>启用中</option><option value="1" ${d.off?'selected':''}>已停用</option></select>
+      <div class="hint">停用后不再出现在「添加工序」候选里，已有工艺中的引用不受影响。</div>
+    </div>
+  `, `${del}<span class="sp"></span>
+      <button class="btn" onclick="dwClose()">取消</button>
+      <button class="btn pri" onclick="dwProcSave()">${isNew?'创建工序':'保存'}</button>`);
+}
+function dwProcSave(){
+  dwProcSync();
+  const d=DWG, name=(d.name||'').trim();
+  if(!name){ toast('请填写工序名称','err'); $('qName').focus(); return; }
+  if(!d.groups.length){ toast('请至少勾选一个可承接班组','err'); return; }
+  const data={ name, days:Math.max(1,parseInt(d.days,10)||1), price:Math.max(0,Math.round(+d.price||0)),
+               note:(d.note||'').trim(), groups:d.groups.slice(), ind:!!d.ind, off:!!d.off };
+  if(d.mode==='new'){
+    PROC[d.code]=Object.assign({ id:d.code }, data);
+    MAT[d.code]=[]; PROC_LIST.push(d.code);
+    toast('已创建工序 '+d.code+' · '+name,'ok');
+  }else{
+    Object.assign(PROC[d.pid], data);
+    toast('已保存「'+name+'」','ok');
+  }
+  dwClose(); PRF.page=1; render();
+}
+function dwProcDel(){
+  const d=DWG; if(!d||d.mode==='new') return;
+  const used=procUsedIn(d.pid);
+  if(used.length){ toast('正被 '+used.length+' 条工艺路线引用，请先到「工艺」页移除后再删除','err'); return; }
+  if(!d.confirmDel){ d.confirmDel=true; renderProcForm(); return; }
+  const i=PROC_LIST.indexOf(d.pid); if(i<0) return;
+  PROC_LIST.splice(i,1); delete PROC[d.pid]; delete MAT[d.pid];
+  dwClose(); toast('已删除工序 '+d.pid,'err'); render();
+}
+
+/* ---- 工艺路线：查看 / 编辑 / 新建抽屉 ---- */
+function dwCraftView(cid){
+  const c=CRAFT[cid]; if(!c) return;
+  const seq=craftSeq(c), indN=(c.ind||[]).length, cyc=craftCyc(c), cost=craftCost(c);
+  const used=craftUsedBy(cid);
+  const gids=GROUPS.map(g=>g.id).filter(gid=>seq.some(pid=>procGroups(pid).includes(gid)));
+  const chain=seq.length?`<table class="mtbl">
+      <thead><tr><th>#</th><th>工序</th><th>类型</th><th class="num">周期</th><th class="num">计件</th><th>可承接班组</th></tr></thead>
+      <tbody>${seq.map((pid,i)=>{ const p=PROC[pid]||{}; const ind=(c.ind||[]).includes(pid);
+        return `<tr><td>${ind?'前'+(i+1):(i-indN+1)}</td>
+          <td>${esc(p.name||pid)}</td>
+          <td>${ind?'<span class="tag ind">前置</span>':'<span class="tag main">主链</span>'}</td>
+          <td class="num">${p.days||1} 天</td>
+          <td class="num">${money(p.price||0)}</td>
+          <td>${procGroups(pid).map(g=>grp(g).name).join('、')||'<span class="muted">未指定</span>'}</td></tr>`;}).join('')}</tbody>
+    </table>`:'<div class="note warn">这条工艺还没有工序。</div>';
+  dwOpen('工艺详情 · '+cid, `
+    <div class="dw-hero">
+      <div class="hrow">
+        <div class="hmain">
+          <div class="hname">${esc(c.name)}</div>
+          <div class="hcode">工艺编码 ${cid}</div>
+        </div>
+        <div class="hb">
+          <span class="tag main">适用 ${esc(c.model||'通用')}</span>
+          ${c.off?badge('已停用',''):badge('启用中','ok')}
+        </div>
+      </div>
+      <div class="hstats">
+        <div><div class="sl">工序道数</div><div class="sv">${seq.length}<em>道</em></div></div>
+        <div><div class="sl">标准周期</div><div class="sv">${cyc}<em>天</em></div></div>
+        <div><div class="sl">单台计件</div><div class="sv">${money(cost)}<em>/ 台</em></div></div>
+      </div>
+    </div>
+    <div class="sec-t">工序链条 <span class="sp">按执行顺序 · 前置在最前 · 共 ${seq.length} 道</span></div>
+    <div class="mt-wrap">${chain}</div>
+    <div class="sec-t">基本信息 <span class="sp">主数据 · 可编辑</span></div>
+    ${kv('适用产品',esc(c.model||'通用'))}
+    ${kv('工艺说明',esc(c.note||'—'))}
+    ${kv('班组覆盖',gids.map(g=>grp(g).name).join('、')||'未覆盖')}
+    <div class="sec-t">被生产项目引用 <span class="sp">点击可跳转对应项目 · 共 ${used.length} 个</span></div>
+    ${used.length?`<div class="chips">${used.map(p=>`<span class="chip co" onclick="dwClose();go('proj','${p.id}')">${esc(p.name)}</span>`).join('')}</div>`
+      :'<div class="note warn">还没有生产项目使用这条工艺，新项目立项时会按产品型号推荐它。</div>'}
+  `, `<button class="btn" onclick="dwClose()">关闭</button>
+      <button class="btn" onclick="dwCraftCopy('${cid}')">复制一份</button>
+      <button class="btn pri" onclick="dwCraftEdit('${cid}')">编辑工艺</button>`);
+}
+
+function dwCraftEdit(cid){
+  const c=CRAFT[cid]; if(!c) return;
+  DWC={mode:'edit', cid, name:c.name||'', model:c.model||'', note:c.note||'', off:!!c.off,
+       procs:(c.procs||[]).slice(), ind:(c.ind||[]).slice(), confirmDel:false};
+  renderCraftForm();
+}
+function dwCraftNew(){
+  let mx=0; CRAFT_LIST.forEach(id=>{ const n=parseInt(String(id).replace(/\D/g,''),10)||0; if(n>mx) mx=n; });
+  DWC={mode:'new', cid:'GY'+String(mx+1).padStart(2,'0'), name:'', model:'', note:'', off:false,
+       procs:[], ind:[], confirmDel:false};
+  renderCraftForm();
+}
+function dwCraftSync(){
+  if(!DWC || !$('cName')) return;
+  DWC.name=val('cName'); DWC.model=val('cModel'); DWC.note=val('cNote'); DWC.off=val('cOff')==='1';
+}
+function dwCraftRow(pid,i,ind){
+  const p=PROC[pid]||{ name:pid };
+  const mainN=DWC.procs.length;
+  const ops=ind
+    ? `<button class="sw" onclick="dwCraftTog('${pid}')">转主链</button>`
+    : `<button ${i<=0?'disabled':''} onclick="dwCraftMove(-1,'${pid}')" title="上移">↑</button>
+       <button ${i>=mainN-1?'disabled':''} onclick="dwCraftMove(1,'${pid}')" title="下移">↓</button>
+       <button class="sw" onclick="dwCraftTog('${pid}')">转前置</button>`;
+  return `<div class="crow ${ind?'pre':''}">
+    <span class="ci">${ind?'前':i+1}</span>
+    <div class="cn"><b>${esc(p.name||pid)}</b><em>${pid} · 标准 ${p.days||1} 天 · 计件 ${money(p.price||0)}</em></div>
+    <div class="ca">${ops}<button class="rm" onclick="dwCraftRm('${pid}')">移除</button></div>
+  </div>`;
+}
+function renderCraftForm(){
+  const d=DWC, isNew=d.mode==='new';
+  const seq=d.ind.concat(d.procs);
+  const cyc=seq.reduce((a,pid)=>a+((PROC[pid]&&PROC[pid].days)||1),0);
+  const cost=seq.reduce((a,pid)=>a+((PROC[pid]&&PROC[pid].price)||0),0);
+  const inChain=pid=>d.procs.includes(pid)||d.ind.includes(pid);
+  const rest=PROC_LIST.filter(pid=>PROC[pid]&&!PROC[pid].off&&!inChain(pid));
+  const offN=PROC_LIST.filter(pid=>PROC[pid]&&PROC[pid].off&&!inChain(pid)).length;
+  const used=isNew?[]:craftUsedBy(d.cid);
+  const del=isNew?'':`<button class="btn del ${d.confirmDel?'on':''}" onclick="dwCraftDrop()">${d.confirmDel?'再点一次确认删除':(used.length?'删除（被引用）':'删除')}</button>`;
+  dwOpen(isNew?('新建工艺路线 · '+d.cid):('编辑工艺路线 · '+d.cid), `
+    <div class="note">${isNew?'创建后自动按工序链重算标准周期与单台计件成本，并作为排产时的推荐工艺。':'修改保存后立即生效；已被生产项目引用的工艺不能删除，可改为「已停用」。'}</div>
+    <div class="fld" style="margin-bottom:12px"><label>工艺路线名称 <i class="req">*</i></label>
+      <input id="cName" value="${esc(d.name)}" placeholder="例如：KDC-12 高压柜标准装配工艺"></div>
+    <div class="frm">
+      <div class="fld"><label>适用产品 <i class="req">*</i></label><input id="cModel" value="${esc(d.model)}" placeholder="KDC-12 / 通用"></div>
+      <div class="fld"><label>状态</label><select id="cOff"><option value="0" ${d.off?'':'selected'}>启用中</option><option value="1" ${d.off?'selected':''}>已停用</option></select></div>
+    </div>
+    <div class="fld" style="margin-bottom:14px"><label>工艺说明</label>
+      <input id="cNote" value="${esc(d.note)}" placeholder="适用场景 / 注意事项"></div>
+    <div class="fld" style="margin-bottom:14px"><label>① 主工序链 <i class="req">*</i></label>
+      ${d.procs.length?d.procs.map((pid,i)=>dwCraftRow(pid,i,false)).join(''):'<div class="note warn">主链还没有工序，从下面的工序库添加。</div>'}
+    </div>
+    <div class="fld" style="margin-bottom:14px"><label>② 前置独立工序</label>
+      ${d.ind.length?d.ind.map((pid,i)=>dwCraftRow(pid,i,true)).join(''):'<div class="hint" style="margin:0 0 6px">没有前置工序。前置工序在主链开工之前先做（如铜排线）。</div>'}
+    </div>
+    <div class="fld" style="margin-bottom:14px"><label>③ 从工序库添加</label>
+      ${rest.length?`<div class="chips">${rest.map(pid=>`<span class="chip" onclick="dwCraftAdd('${pid}')">＋ ${esc(PROC[pid].name)}${PROC[pid].ind?'<em class="tg">前置</em>':''}</span>`).join('')}</div>`
+        :'<div class="note ok">工序库里的工序都已加入。</div>'}
+      ${rest.some(pid=>PROC[pid].ind)?'<div class="hint">带「前置」标记的是前置独立工序，加入后排在 ② 里，在主链开工之前先做。</div>':''}
+      ${offN?`<div class="hint">还有 ${offN} 道已停用的工序未列出，要用请先到「工序」页启用。</div>`:''}
+    </div>
+    <div class="note" style="background:#f7f9fc;color:var(--tx2);margin-bottom:0">保存后重算：标准周期 <b>${cyc} 天</b> · 单台计件 <b>${money(cost)}</b></div>
+  `, `${del}<span class="sp"></span>
+      <button class="btn" onclick="dwClose()">取消</button>
+      <button class="btn pri" onclick="dwCraftSave()">${isNew?'创建工艺':'保存'}</button>`);
+}
+function dwCraftAdd(pid){
+  dwCraftSync();
+  if(PROC[pid]&&PROC[pid].off){ toast('「'+PROC[pid].name+'」已停用，请先到「工序」页启用','err'); return; }
+  if(DWC.procs.includes(pid)||DWC.ind.includes(pid)){ toast('这道工序已经在这条工艺里','warn'); return; }
+  if(PROC[pid]&&PROC[pid].ind) DWC.ind.push(pid); else DWC.procs.push(pid);
+  renderCraftForm();
+}
+function dwCraftRm(pid){
+  dwCraftSync();
+  DWC.procs=DWC.procs.filter(x=>x!==pid);
+  DWC.ind=DWC.ind.filter(x=>x!==pid);
+  renderCraftForm();
+}
+function dwCraftMove(dir,pid){
+  dwCraftSync();
+  const a=DWC.procs, i=a.indexOf(pid), j=i+dir;
+  if(i<0||j<0||j>=a.length) return;
+  a[i]=a[j]; a[j]=pid;
+  renderCraftForm();
+}
+function dwCraftTog(pid){
+  dwCraftSync();
+  if(DWC.procs.includes(pid)){ DWC.procs=DWC.procs.filter(x=>x!==pid); DWC.ind.push(pid); }
+  else { DWC.ind=DWC.ind.filter(x=>x!==pid); DWC.procs.push(pid); }
+  renderCraftForm();
+}
+function dwCraftSave(){
+  dwCraftSync();
+  const d=DWC, name=(d.name||'').trim(), model=(d.model||'').trim();
+  if(!name){ toast('请填写工艺路线名称','err'); $('cName').focus(); return; }
+  if(!model){ toast('请填写适用产品（或填「通用」）','err'); $('cModel').focus(); return; }
+  const seq=d.ind.concat(d.procs);
+  if(!seq.length){ toast('工艺至少要有 1 道工序','err'); return; }
+  const offP=seq.filter(pid=>PROC[pid].off);
+  if(offP.length){ toast('有已停用的工序还在链条里：'+offP.map(pid=>PROC[pid].name).join('、')+'，请先启用或移除','err'); return; }
+  const noG=seq.filter(pid=>!procGroups(pid).length);
+  if(noG.length){ toast('这 '+noG.length+' 道工序还没指定可承接班组：'+noG.map(pid=>PROC[pid].name).join('、')+'，请先到「工序」页维护','err'); return; }
+  const data={ name, model, note:(d.note||'').trim(), off:!!d.off, procs:d.procs.slice(), ind:d.ind.slice() };
+  data.days=seq.reduce((a,pid)=>a+(PROC[pid].days||1),0);
+  if(d.mode==='new'){
+    CRAFT[d.cid]=Object.assign({ id:d.cid }, data); CRAFT_LIST.push(d.cid);
+    toast('已创建工艺 '+d.cid+' · '+name,'ok');
+  }else{
+    Object.assign(CRAFT[d.cid], data);
+    toast('已保存「'+name+'」','ok');
+  }
+  dwClose(); CRF.page=1; render();
+}
+function dwCraftDrop(){
+  const d=DWC; if(!d||d.mode==='new') return;
+  const used=craftUsedBy(d.cid);
+  if(used.length){ toast('被 '+used.length+' 个生产项目引用，不能删除；可改为「已停用」','err'); return; }
+  if(!d.confirmDel){ d.confirmDel=true; renderCraftForm(); return; }
+  const i=CRAFT_LIST.indexOf(d.cid); if(i>=0) CRAFT_LIST.splice(i,1);
+  delete CRAFT[d.cid];
+  if(S.cur===d.cid) S.cur=null;
+  dwClose(); toast('已删除工艺 '+d.cid,'err'); render();
+}
+function dwCraftCopy(cid){
+  const c=CRAFT[cid]; if(!c) return;
+  let mx=0; CRAFT_LIST.forEach(id=>{ const n=parseInt(String(id).replace(/\D/g,''),10)||0; if(n>mx) mx=n; });
+  const id='GY'+String(mx+1).padStart(2,'0');
+  CRAFT[id]=JSON.parse(JSON.stringify(c));
+  CRAFT[id].id=id; CRAFT[id].name=c.name+'（副本）';
+  CRAFT_LIST.push(id);
+  toast('已复制为 '+id+'：'+CRAFT[id].name,'ok');
+  CRF.page=1; render();
+  dwCraftEdit(id);
+}
+/* ---- 排产抽屉：选设备 → 定时间班组 → 看产能冲突 → 确认 ---- */
+function openPlan(id){
+  go('plan', id);
+  if(id && proj(id) && devOf(id).length) dwPlan(id);
+}
+function dwPlan(pid){
+  const p=proj(pid); if(!p) return;
+  const ds=devOf(pid);
+  if(!ds.length){ toast('该项目还没有设备，请先在项目管理里生成设备','err'); return; }
+  const todo=ds.filter(d=>!d.planStart);
+  const base=todo.length?todo:ds;
+  const hit=ds.find(d=>d.planStart&&d.planStart>=TODAY);
+  PLN={ pid, sel:base.map(d=>d.sn),
+        s:hit?hit.planStart:addD(TODAY,1), e:hit?hit.planEnd:addD(TODAY,7),
+        ws:p.ws||WORKSHOPS[0], pg:leadGroupsOf(base.map(d=>d.sn),p.craft).slice() };
+  renderPlanDrawer();
+}
+function dwSyncPlan(){
+  if(!PLN) return;
+  const s=$('plS'), e=$('plE'), w=$('plWs');
+  if(s&&s.value) PLN.s=s.value;
+  if(e&&e.value) PLN.e=e.value;
+  if(w&&w.value) PLN.ws=w.value;
+}
+function planPickRow(d,on){
+  const st=devState(d);
+  return `<div class="pick ${on?'on':''}" onclick="planPick('${d.sn}')">
+    <div class="box">${on?'✓':''}</div>
+    <div class="m"><div class="t">${d.sn}</div>
+      <div class="s">出厂 ${d.seq}${d.planStart?' · 已排 '+d.planStart+' ~ '+d.planEnd:' · 未排产'}</div></div>
+    <div class="r">${badge(st.t,st.c)}</div></div>`;
+}
+function planPick(sn){
+  dwSyncPlan();
+  const i=PLN.sel.indexOf(sn);
+  if(i>=0) PLN.sel.splice(i,1); else PLN.sel.push(sn);
+  renderPlanDrawer();
+}
+function planSelAll(mode){
+  dwSyncPlan();
+  const ds=devOf(PLN.pid);
+  if(mode===1) PLN.sel=ds.map(d=>d.sn);
+  else if(mode==='todo') PLN.sel=ds.filter(d=>!d.planStart).map(d=>d.sn);
+  else PLN.sel=[];
+  renderPlanDrawer();
+}
+function planSetDate(k,v){
+  dwSyncPlan(); if(!v) return;
+  if(k==='s'){ PLN.s=v; if(PLN.e<v) PLN.e=v; }
+  else { PLN.e=v; if(PLN.s>v) PLN.s=v; }
+  renderPlanDrawer();
+}
+function planGrp2(gid){
+  dwSyncPlan();
+  const a=PLN.pg, i=a.indexOf(gid);
+  if(i>=0){ if(a.length<=1){ toast('至少要留一个参与班组','warn'); return; } a.splice(i,1); }
+  else a.push(gid);
+  renderPlanDrawer();
+}
+function renderPlanDrawer(){
+  if(!PLN) return;
+  const p=proj(PLN.pid); if(!p) return;
+  const box=$('dwb'); const keep=box?box.scrollTop:0;
+  const ds=devOf(p.id), s=projStats(p), sel=ds.filter(d=>PLN.sel.includes(d.sn));
+  const sv=PLN.s, ev=PLN.e, span=Math.max(1,daysBetween(sv,ev)+1);
+  const winFrom=addD(sv,-7), winTo=addD(ev,7);
+  const wd=workdaysBetween(winFrom,winTo);
+  const ld=dayLoadRows(winFrom,winTo,p.id);
+  const others=[];
+  PROJ.forEach(q=>{ if(q.id===p.id) return;
+    const dv=devsInWindow(winFrom,winTo,null).filter(x=>x.proj===q.id);
+    if(!dv.length) return;
+    others.push({ name:q.name.length>10?q.name.slice(0,10)+'…':q.name, n:dv.length,
+                  from:dv.map(x=>x.planStart).sort()[0], to:dv.map(x=>x.planEnd).sort().slice(-1)[0] });
+  });
+  const late=p.due<TODAY && s.inbound<s.n;
+  const st=projStateLabel(p);
+  const craftG=craftGroups(p.craft);
+  const overN=sel.filter(d=>d.planStart).length;
+  const maxCells=Math.max(1,...PLN.pg.map(gid=>groupWorkload(gid,winFrom,winTo,p.id).cells));
+  const gl=sel.slice(0,6).map(d=>({ label:d.sn, sub:'本次排产', start:sv, end:ev, cls:'sel', tag:span+' 天' }))
+    .concat(others.map(q=>({ label:q.name, sub:q.n+' 台在排产', start:q.from, end:q.to, cls:'other', tag:q.n+' 台' })));
+  const body=`
+    <div class="dw-hero">
+      <div class="hrow">
+        <div class="hmain"><div class="hname">${esc(p.name)}</div><div class="hcode">${p.id} · ${esc(p.cus||'—')}</div></div>
+        <div class="hb">${badge(st.t,st.c)}${late?badge('交期已逾期','err'):badge('交期 '+p.due,'')}</div>
+      </div>
+      <div class="hstats">
+        <div><div class="sl">设备总数</div><div class="sv">${s.n}<em>台</em></div></div>
+        <div><div class="sl">已排产</div><div class="sv">${s.planned}<em>台</em></div></div>
+        <div><div class="sl">本次勾选</div><div class="sv">${sel.length}<em>台</em></div></div>
+      </div>
+    </div>
+    <div class="sec-t">① 选设备 <span class="sp">点条目勾选 · 已排产的再勾选＝改期</span></div>
+    <div style="display:flex;gap:12px;font-size:12px;margin:-2px 0 8px">
+      <span class="lnk" onclick="planSelAll('todo')">只选未排产</span>
+      <span class="lnk" onclick="planSelAll(1)">全选</span>
+      <span class="lnk" onclick="planSelAll(0)">清空</span>
+    </div>
+    <div class="pk-grid">${ds.map(d=>planPickRow(d,PLN.sel.includes(d.sn))).join('')}</div>
+    <div class="sec-t">② 排产时间与参与班组</div>
+    <div class="frm">
+      <div class="fld"><label>计划开工</label><input type="date" id="plS" value="${sv}" onchange="planSetDate('s',this.value)"></div>
+      <div class="fld"><label>计划完工</label><input type="date" id="plE" value="${ev}" onchange="planSetDate('e',this.value)"></div>
+      <div class="fld"><label>工期</label><input value="${span} 天" readonly></div>
+    </div>
+    <div class="fld" style="margin-bottom:12px"><label>生产车间</label>
+      <select id="plWs">${WORKSHOPS.map(w=>`<option ${w===PLN.ws?'selected':''}>${w}</option>`).join('')}</select></div>
+    <div class="fld" style="margin-bottom:12px"><label>参与班组 <i class="req">*</i></label>
+      <div class="chips">${GROUPS.map(g=>{ const need=craftG.includes(g.id), on=PLN.pg.includes(g.id);
+        return `<span class="chip ${on?'on':''}" onclick="planGrp2('${g.id}')" title="${need?'本工艺路线涉及该组':'本工艺不涉及该组，勾上是为跨组支援预留'}">${on?'✓ ':''}${g.name}${need?'':' · 非本工艺'}</span>`;}).join('')}</div>
+      <div class="hint">默认按工艺路线带出。派单时每道工序只能在这些组里选，少勾会导致那道工序没人接。</div>
+    </div>
+    ${overN?`<div class="note warn">已勾选的设备里有 <b>${overN}</b> 台已经排过产，确认后按新的时间窗覆盖原计划。</div>`:''}
+    <div class="sec-t">③ 产能与冲突 <span class="sp">窗口 ${winFrom} ~ ${winTo}（前后各一周）</span></div>
+    <div class="cap4">
+      <div><div class="sl">窗口峰值</div><div class="sv">${ld.peak}<em>台</em></div></div>
+      <div><div class="sl">日均在产</div><div class="sv">${ld.avg}<em>台</em></div></div>
+      <div><div class="sl">工作日</div><div class="sv">${wd}<em>天</em></div></div>
+      <div><div class="sl">同期项目</div><div class="sv">${others.length}<em>个</em></div></div>
+    </div>
+    <div class="note ${ld.peak>=24?'warn':'ok'}">${ld.peak>=24
+      ? `窗口内其它项目已排 <b>${ld.peak}</b> 台在产（峰值），再加本次 ${sel.length} 台会挤在一起，建议错峰或与销售重议交期。`
+      : `窗口内其它项目峰值 <b>${ld.peak}</b> 台在产，插入本次 ${sel.length} 台不会明显冲突。`}</div>
+    <div class="sec-t" style="margin-top:2px">参与班组工作量 <span class="sp">窗口内台次（不含本项目）</span></div>
+    ${PLN.pg.map(gid=>{ const w2=groupWorkload(gid,winFrom,winTo,p.id);
+      const perDay=wd? (w2.cells/wd).toFixed(1) : '0';
+      const tone=w2.cells/wd>2?'do':(w2.cells/wd>=1?'':'ok');
+      const label=w2.cells/wd>2?'偏紧':(w2.cells/wd>=1?'正常':'轻松');
+      return `<div class="prow"><div class="av" style="background:${grp(gid).color}22;color:${grp(gid).color}">${grp(gid).name.slice(-1)}</div>
+      <div class="m"><div class="t">${grp(gid).name} · ${emp(grp(gid).leader).name} ${badge(label,tone==='ok'?'ok':(tone==='do'?'err':'warn'))}</div>
+        <div class="s">窗口内 <b>${w2.cells}</b> 台次 · 日均 <b>${perDay}</b> 台次 · 涉及 ${w2.devs.length} 台设备${w2.projs.length?'、'+w2.projs.length+' 个项目':''}</div></div>
+      ${loadBar(w2.cells,maxCells,perDay>2?'do':'')}</div>`;}).join('')||'<div class="empty">还没有选择参与班组</div>'}
+    <div class="sec-t" style="margin-top:10px">时间轴 <span class="sp">本次勾选前 ${Math.min(sel.length,6)} 台 + 同期项目 · 虚线＝今天</span></div>
+    <div class="gt-scroll"><div class="gt-inner">${ganttHtml(winFrom,winTo,gl)}</div></div>
+    <div style="display:flex;gap:12px;margin-top:8px;font-size:11.5px;color:var(--tx3);flex-wrap:wrap">
+      <span><i class="lg sel"></i> 本次排产</span><span><i class="lg other"></i> 同期其它项目</span>
+    </div>`;
+  dwOpen('排产 · '+p.id, body, `<span class="sp" style="font-size:12.5px;color:var(--tx2)">已选 <b>${sel.length}</b> 台 · ${sv} ~ ${ev}（${span} 天）</span>
+    <button class="btn" onclick="dwClose()">取消</button>
+    <button class="btn pri" ${sel.length?'':'disabled'} onclick="dwPlanSave()">确认排产（${sel.length} 台）</button>`, 'w2');
+  if(box) box.scrollTop=keep;
+}
+function dwPlanSave(){
+  dwSyncPlan();
+  const p=proj(PLN.pid); if(!p) return;
+  if(!PLN.sel.length){ toast('请先勾选要排产的设备','err'); return; }
+  if(!PLN.s||!PLN.e){ toast('请填写计划开工与完工日期','err'); return; }
+  if(PLN.e<PLN.s){ toast('完工日期不能早于开工日期','err'); return; }
+  if(!PLN.pg.length){ toast('请至少选择一个参与班组','err'); return; }
+  PLN.sel.forEach(sn=>{ const d=dev(sn);
+    d.planStart=PLN.s; d.planEnd=PLN.e; d.ws=PLN.ws; d.gids=PLN.pg.slice(); });
+  if(p.st==='reviewed') p.st='scheduled';
+  toast(`${PLN.sel.length} 台设备已排产：${PLN.s} ~ ${PLN.e} · 参与班组 ${PLN.pg.map(g=>grp(g).name).join('、')}`,'ok');
+  dwClose(); render();
+}
+/* ---- 派单 ---- */
+function doAssign(id){
+  if(!S.sel.length||!S.procs.length){ toast('请先勾选设备与工序','err'); return; }
+  const p=proj(id);
+  S.asgSelCur=S.sel.slice();
+  S.sel.forEach(sn=>{ const d=dev(sn);
+    S.procs.forEach(pid=>{
+      const st=d.steps.find(x=>x.p===pid); if(!st) return;
+      st.g=(S.procGroup&&S.procGroup[pid])||procGroups(pid)[0]||GROUPS[0].id;
+      const dr=asgRowDate(p,pid,S.asgSelCur);          // 工序计划：默认排产窗口，可在派单页调整
+      if(dr.s) st.ps=dr.s;
+      if(dr.e) st.pe=dr.e;
+    }); });
+  const all=devOf(id).every(d=>d.steps.every(s=>s.g));
+  if(all) p.st='assigned';
+  toast(`${S.sel.length} 台设备 × ${S.procs.length} 道工序已派单`);
+  S.sel=[]; S.procs=null; render();
+}
+
+/* ---- 派工向导 ---- */
+function wizProc(pid){ S.wiz.proc=pid; wizAvg(); renderPanel(); }
+function wizEmp(id,on){
+  const w=S.wiz;
+  if(on){ if(!w.emps.includes(id)) w.emps.push(id); }
+  else {
+    w.emps=w.emps.filter(x=>x!==id);
+    w.devs.forEach(sn=>{ const arr=(w.devEmp[sn]||[]).filter(x=>x!==id);
+      if(arr.length) w.devEmp[sn]=arr; else delete w.devEmp[sn]; });   // 他退出了，共同负责的其他人还在
+  }
+  wizAvg(); renderPanel();
+}
+function wizEmpAll(f){
+  const w=S.wiz;
+  w.emps = f? empOfGroup(G()).map(e=>e.id) : [];
+  if(!f) w.devEmp={};
+  wizAvg(); renderPanel();
+}
+function wizAvg(){
+  const w=S.wiz; w.devEmp={};
+  if(!w.emps.length) return;
+  w.devs.forEach((sn,i)=>{ w.devEmp[sn]=[w.emps[i%w.emps.length]]; });   // 默认一人一台
+  wizMats();
+}
+/* 两人一组共同负责：设备按顺序两人两人地分，一台柜两个人做 */
+function wizPairAll(){
+  const w=S.wiz;
+  if(w.emps.length<2){ toast('至少要有 2 个人才能两人一组','warn'); return; }
+  w.devEmp={};
+  w.devs.forEach((sn,i)=>{
+    const a=w.emps[(i*2)%w.emps.length], b=w.emps[(i*2+1)%w.emps.length];
+    w.devEmp[sn]= a===b? [a] : [a,b];
+  });
+  wizMats(); renderPanel();
+  toast('已按两人一组分配：每台柜 2 人共同负责，可再点设备号调整','info');
+}
+/* 点设备号：切换这个人是否参与这台设备（多个人可同时参与 = 共同负责） */
+function wizDev(sn,e){
+  const w=S.wiz, arr=(w.devEmp[sn]||[]).slice(), i=arr.indexOf(e);
+  if(i>=0){
+    if(arr.length<=1){ toast('每台设备至少要留一个人负责','warn'); return; }
+    arr.splice(i,1);
+  } else {
+    if(arr.length>=3){ toast('一台设备最多 3 人共同负责','warn'); return; }
+    arr.push(e);
+  }
+  w.devEmp[sn]=arr; wizMats(); renderPanel();
+}
+function wizMat(empId,c,v){ const w=S.wiz; w.mats[empId]=w.mats[empId]||{}; w.mats[empId][c]=Math.max(0,parseInt(v||0,10)||0); }
+function wizDate(k,v){ S.wiz[k]=v; }
+function wizMats(){
+  const w=S.wiz;
+  const list=(w.matList||batchMatList(w.devs));
+  w.emps.forEach(id=>{
+    const n=wizLeadN(id);                    // 主责台数：共同负责的那台只算给主责人，避免重复领料
+    w.mats[id]=w.mats[id]||{};
+    list.forEach(m=>{
+      if(m.aux) return;                      // 辅料不进个人领料单
+      const cur=w.mats[id][m.c];
+      if(!n){ w.mats[id][m.c]=0; return; }
+      if(m.procs.includes(w.proc)){          // 本工序的料：按主责台数算好
+        if(cur==null||cur===0||cur%m.per===0) w.mats[id][m.c]=Math.ceil(m.per*n);
+      } else if(cur==null){ w.mats[id][m.c]=0; }   // 其它工序的料：默认不领，组长说了算
+    });
+  });
+}
+/* 勾选 / 取消某项料（取消＝不领） */
+function wizMatPick(empId,code,on){
+  const w=S.wiz;
+  w.mats[empId]=w.mats[empId]||{};
+  const m=(w.matList||[]).find(x=>x.c===code);
+  if(on){ const n=wizLeadN(empId)||1; w.mats[empId][code]=Math.ceil((m?m.per:1)*n); }
+  else { w.mats[empId][code]=0; }
+  renderPanel();
+}
+function wizSubmit(){
+  const w=S.wiz, gid=G();
+  if(!w.emps.length){ toast('请先选择参与的人','err'); return; }
+  const un=w.devs.filter(sn=>!(w.devEmp[sn]||[]).length);
+  if(un.length){ toast(`还有 ${un.length} 台设备没指定人：${un.join('、')}`,'err'); return; }
+  const id=nextNo('PG'), p=proj(w.proj);
+  const workers=w.emps.map(e=>({ emp:e, devs:w.devs.filter(sn=>(w.devEmp[sn]||[]).includes(e)),
+    lead:w.devs.filter(sn=>(w.devEmp[sn]||[])[0]===e),
+    mats:Object.keys(w.mats[e]||{}).filter(c=>+w.mats[e][c]>0).map(c=>({c,q:+w.mats[e][c]})) })).filter(x=>x.devs.length);
+  const aux=(MAT[w.proc]||[]).filter(m=>m.aux).map(m=>({c:m.c,q:Math.ceil(m.per*w.devs.length)}));
+  DISPATCH.push({ id, proj:w.proj, proc:w.proc, group:gid, devs:w.devs.slice(), workers, aux, start:w.start, end:w.end, st:'doing' });
+  w.devs.forEach(sn=>{ const d=dev(sn), st=d.steps.find(s=>s.p===w.proc), arr=w.devEmp[sn]||[];
+    if(st){ st.e=arr[0]||''; st.es=arr.slice(); st.d=id; st.st='doing'; } });   // 第一个为主责，其余为协作
+  workers.forEach(x=>{ if(x.mats.length){
+    const mn=(MAT[w.proc]||[]);
+    PICK.push({ no:nextNo('LL'), dispId:id, emp:x.emp, st:'待领',
+      items:x.mats.map(m=>({ c:m.c, n:(mn.find(z=>z.c===m.c)||{}).n||m.c, q:m.q, wh:(mn.find(z=>z.c===m.c)||{}).wh||'' })) });
+  }});
+  if(p.st==='assigned'||p.st==='scheduled') p.st='producing';
+  const coopN=w.devs.filter(sn=>(w.devEmp[sn]||[]).length>1).length;
+  toast(`${PROC[w.proc].name} 派工完成：${w.devs.length} 台 · ${workers.length} 人${coopN?`（其中 ${coopN} 台两人共同负责）`:''}，已生成 ${workers.length} 张个人领料单`,'ok');
+  S.wiz=null; S.sub=null; S.sel=[]; go('pick',id);
+}
+
+/* ---- 领料 ---- */
+function doPick(no){
+  const s=PICK.find(x=>x.no===no); if(!s) return;
+  s.st='done';
+  const d=DISPATCH.find(x=>x.id===s.dispId); if(d&&d.st==='doing') d.st='working';
+  toast(`${emp(s.emp).name} 的领料单 ${no} 已出库（打印 1 份）`,'ok');
+  renderPanel();
+}
+
+/* ---- 报工 ---- */
+function val(id){ const el=$(id); return el?el.value:''; }
+function doReport(sn){
+  const d=dev(sn), cur=devCurStep(d);
+  if(!cur){ toast('这台设备的工序都已完工','err'); return; }
+  const inst=parseInt(val('rInst')||0,10)||0, ok=parseInt(val('rOk')||0,10)||0,
+        good=parseInt(val('rGood')||0,10)||0, bad=parseInt(val('rBad')||0,10)||0;
+  if(!inst&&!ok&&!good){ toast('请填写安装件数或完成台数','err'); return; }
+  cur.inst+=inst; cur.ok+=Math.max(ok,good);
+  if(ok>=1){ cur.st='done'; cur.ok=1; }
+  REPORT.push({ id:'RB-'+REPORT.length+1, dev:sn, proc:cur.p, emp:cur.e||ME(), date:TODAY, inst, ok, bad, note:val('rNote') });
+  const p=proj(d.proj); if(p.st!=='producing') p.st='producing';
+  toast(`${sn} 报工成功${ok>=1?'，'+PROC[cur.p].name+' 已完工，流转到下一道工序':''}`,'ok');
+  renderPanel();
+}
+
+/* ---- 检验入库 ---- */
+function chkSelf(i){ const d=dev(S.cur); d.self.items=d.self.items||{}; d.self.items[i]=!d.self.items[i]; renderPanel(); }
+function doInbound(sn){
+  const d=dev(sn), name=$('signName')?val('signName'):'';
+  d.inbound=nextNo('RK'); d.self.by=name||'王志强'; d.self.at=TODAY+' 17:20'; d.qc='合格';
+  const p=proj(d.proj);
+  if(devOf(p.id).every(x=>x.inbound)) p.st='inbounded';
+  toast(`${sn} 已入生产成品库 · 入库单 ${d.inbound}`,'ok');
+  renderPanel();
+}
+
+/* ---- 角色 ---- */
+function switchRole(r){
+  S.role=r; S.page = r==='director'?'proj':(r==='leader'?'work':'mytask');
+  S.cur=null; S.sel=[]; S.sub=null; S.wiz=null; S.procs=null; S.pg=null; S.pd=null; S.pdc=null; __lastPage=S.page;
+  render();
+  toast(`已切换为「${r==='director'?'生产主任':r==='leader'?'班组长':'生产员工'}」视角`);
+}
+/* ============================ 12. 导航与渲染 ============================ */
+const NAV = {
+  director:[['proj','项目管理'],['todo','待办'],['projaudit','立项审核'],['audit','审核'],['proc','工序'],['craft','工艺'],['plan','排产'],['assign','派单'],['track','跟踪'],['pay','计件']],
+  leader:[['work','派工'],['pick','领料'],['report','报工'],['inbound','入库'],['track','跟踪']],
+  worker:[['mytask','我的任务'],['mypick','我的领料'],['report','报工'],['mypay','我的计件']],
+};
+const SVG = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICONS = {
+  proj: SVG('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
+  todo: SVG('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),
+  projaudit: SVG('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15h6"/>'),
+  audit: SVG('<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/>'),
+  proc: SVG('<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>'),
+  craft: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+  plan: SVG('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
+  assign: SVG('<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>'),
+  track: SVG('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
+  pay: SVG('<path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),
+  work: SVG('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  pick: SVG('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>'),
+  report: SVG('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>'),
+  inbound: SVG('<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>'),
+  mytask: SVG('<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>'),
+  mypick: SVG('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>'),
+  mypay: SVG('<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>'),
+};
+const VIEWS = { proj:viewProj, todo:viewTodo, projaudit:viewProjAudit, audit:viewAudit, proc:viewProc, craft:viewCraft,
+  plan:viewPlan, assign:viewAssign, track:viewTrack, pay:viewPay,
+  work:viewWork, pick:viewPick, report:viewReport, inbound:viewInbound,
+  mytask:viewMyTask, mypick:viewMyPick, mypay:viewMyPay };
+const PAGE_TXT = { proj:'项目管理', todo:'待办', projaudit:'项目立项审核', audit:'任务书审核', proc:'工序', craft:'工艺',
+  plan:'排产', assign:'派单', track:'项目跟踪', pay:'计件', work:'派工', pick:'领料', report:'报工', inbound:'入库',
+  mytask:'我的任务', mypick:'我的领料', mypay:'我的计件' };
+const ROLE_TXT = { director:'生产主任', leader:'班组长', worker:'生产员工' };
+
+function navBadge(k){
+  const c=counts();
+  if(k==='todo') return c.pendProj+c.pendAudit+c.pendPlan+c.pendAssign+c.pendWork+c.late;
+  if(k==='projaudit') return c.pendProj;
+  if(k==='audit') return c.pendAudit;
+  if(k==='plan') return c.pendPlan;
+  if(k==='assign') return c.pendAssign;
+  if(k==='work') return DEV.filter(d=>d.steps.some(s=>s.g===G()&&!s.e)).length;
+  if(k==='report') return DEV.filter(d=>!d.inbound&&d.steps.some(s=>s.st==='doing')).length;
+  if(k==='inbound') return c.pendIn;
+  if(k==='mytask') return myDevs().length;
+  if(k==='mypick') return PICK.filter(s=>s.emp===ME()&&s.st!=='done').length;
+  return 0;
+}
+function toggleNav(){ document.body.classList.toggle('navc'); }
+function render(){
+  if(__lastPage!==S.page){ S.cur=null; S.sel=[]; S.sub=null; S.wiz=null; S.procs=null; S.procGroup=null; S.pd=null; S.pg=null; }
+  __lastPage=S.page;
+  $('roles').innerHTML = ['director','leader','worker'].map(r=>
+    `<button class="${S.role===r?'on':''}" onclick="switchRole('${r}')">${ROLE_TXT[r]}</button>`).join('');
+  $('who').innerHTML = S.role==='leader'
+    ? `<select class="btn sm" onchange="S.gid=this.value;S.cur=null;S.sel=[];render()">
+        ${GROUPS.map(g=>`<option value="${g.id}" ${g.id===S.gid?'selected':''}>${g.name} · ${emp(g.leader).name}</option>`).join('')}</select>`
+    : S.role==='worker'
+    ? `<select class="btn sm" onchange="S.me=this.value;S.cur=null;render()">
+        ${EMP.map(e=>`<option value="${e.id}" ${e.id===ME()?'selected':''}>${e.name} · ${grp(e.g).name}</option>`).join('')}</select>`
+    : '张建军 · 生产主任';
+  $('nav').innerHTML = NAV[S.role].map(([k,t])=>{
+    const b=navBadge(k);
+    return `<button class="${S.page===k?'on':''}" title="${t}" onclick="go('${k}')"><span class="ic">${ICONS[k]||''}</span><span class="nm">${t}</span>${b?`<span class="bdg">${b}</span>`:''}</button>`;
+  }).join('');
+  $('crumb').innerHTML = `<span class="cc">${PAGE_TXT[S.page]||''}</span>`;
+  document.body.classList.toggle('wide', ['proj','proc','craft','plan'].includes(S.page));
+  const who = S.role==='director' ? '张建军' : S.role==='leader' ? emp(grp(S.gid||'G1').leader).name : emp(ME()).name;
+  $('avatar').textContent = who.slice(-1);
+  const v=(VIEWS[S.page]||viewTodo)();
+  $('lh').innerHTML = `<h3>${v.lh[0]}</h3><p>${v.lh[1]}</p>`;
+  $('list').innerHTML = v.list;
+  $('panel').innerHTML = `<div class="back" style="margin-bottom:10px"><button class="btn sm" onclick="backList()">← 返回列表</button></div>` + v.panel;
+}
+function renderPanel(){
+  const v=(VIEWS[S.page]||viewTodo)();
+  $('panel').innerHTML = `<div class="back" style="margin-bottom:10px"><button class="btn sm" onclick="backList()">← 返回列表</button></div>` + v.panel;
+}
+S.gid='G1'; S.me='E12';
+/* URL 参数直达（便于评审/演示）：?role=director&page=plan&cur=MO-20260917-01&gid=G1&me=E12 */
+(function(){
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get('role')) S.role=q.get('role');
+    if(q.get('gid')) S.gid=q.get('gid');
+    if(q.get('me')) S.me=q.get('me');
+    if(q.get('page')) S.page=q.get('page');
+    if(q.get('cur')) S.cur=q.get('cur');
+    if(S.role==='leader'&&!q.get('page')) S.page='work';
+    __lastPage=S.page;
+    if(q.get('sub')==='wiz' && S.page==='work' && S.cur){
+      const gid=S.gid||'G1';
+      S.sel=devOf(S.cur).filter(d=>d.steps.some(s=>s.g===gid&&!s.e)).map(d=>d.sn);
+      if(S.sel.length){ startWiz(S.cur); return; }
+    }
+    if(q.get('sub')==='tr' && S.page==='pick' && S.cur){
+      const x=DISPATCH.filter(y=>y.id===S.cur)[0];
+      if(x&&x.workers.length){ trStart(x.id, x.workers[0].emp); return; }
+    }
+  }catch(e){}
+})();
+render();
+window.addEventListener('resize',()=>{ if(window.innerWidth>900) document.body.classList.remove('mobile-panel'); });
+</script>
+</body>
+</html>
